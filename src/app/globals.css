@@ -23,3 +23,17 @@
 .hook-hypothesis{border-left:2px solid #b8a47b;padding-left:15px;margin-top:18px}.hook-hypothesis>span{font-size:10px;color:#927b4c}.hook-hypothesis p{font-size:12px;color:#6e7165;margin-top:6px}
 
 .scroll-hint{display:none;font-size:10px;color:var(--muted);margin-bottom:12px}@media(max-width:900px){.scroll-hint{display:block}}
+
+.filter-group label>.year-value{font-size:12px;color:var(--ink);min-height:22px;display:flex;align-items:center;font-variant-numeric:tabular-nums}
+.source-back{display:inline-flex;align-items:center;gap:8px;color:#aa4021;font-size:12px;padding:12px 0;margin-top:18px}
+.source-back:hover{color:var(--accent)}
+.text-number{color:#ad4022;font-weight:600;font-variant-numeric:tabular-nums}
+.text-keyword{color:#356453;font-weight:600}
+.text-caution{color:#906519;font-weight:600}
+.stats>div:first-child strong,.stats>div:nth-child(3) strong,.stats>div:last-child strong,.region-item p strong{color:#ad4022}
+.editorial .text-number{color:#ffb596}.editorial .text-keyword{color:#bcdccb}.editorial .text-caution{color:#efd49b}
+.ranking-scope-note{font-size:10px;line-height:1.9;color:var(--muted);margin:0 0 18px}
+.game-name .market-coverage{color:#436c5c;font-size:9px;max-width:290px;line-height:1.7}
+.comparison-table th:first-child{position:sticky;left:0;z-index:1}.comparison-table thead th{color:var(--ink)}
+.detail-ranks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:600px){.source-back{font-size:11px}.filter-group label>.year-value{font-size:11px}.ranking-scope-note{font-size:10px}}
