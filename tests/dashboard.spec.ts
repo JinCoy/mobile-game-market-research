@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import data from '../data/market.json' with {type:'json'};
 
 test('rank graphs use the selected ordinal scale and distinguish missing observations', async ({page}) => {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('textbox',{name:'게임 검색'}).fill('Meowdoku');
   const rankCells=page.locator('.rank-value');
   await expect(rankCells).toHaveText(['1','2']);
@@ -26,7 +26,7 @@ test('all sections retain their layout and render the local design fonts', async
   const errors:string[]=[];
   page.on('pageerror',error=>errors.push(error.message));
   page.on('console',message=>{if(message.type()==='error') errors.push(message.text());});
-  await page.goto('/');
+  await page.goto('./');
   await page.waitForLoadState('networkidle');
   await page.evaluate(()=>document.fonts.ready);
   expect(await page.evaluate(()=>document.fonts.check('500 14px "Inter Variable"','PLAYFIELD') && document.fonts.check('500 14px "IBM Plex Sans"','145') && document.fonts.check('400 14px "Noto Sans KR"','시장'))).toBe(true);
@@ -60,7 +60,7 @@ test('data preserves all rank slots, dates, missing values and traceable origins
 
 test('search, ranking bands, comparison, bookmarks and export work', async ({page}) => {
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
-  await page.goto('/');
+  await page.goto('./');
   await expect(page.getByRole('heading',{level:1})).toHaveText('모바일 게임 시장 분석');
   await expect(page.locator('.intro')).toHaveCount(0);
   await expect(page.getByRole('combobox',{name:'연도',exact:true})).toHaveCount(0);
@@ -101,7 +101,7 @@ test('search, ranking bands, comparison, bookmarks and export work', async ({pag
 });
 
 test('research, region navigation and source sheets are usable', async ({page}) => {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('button',{name:'마케팅',exact:true}).click();
   await expect(page.locator('.method-note')).toContainText('인과관계는 아직 미확인');
   await expect(page.locator('.research-row')).not.toHaveCount(0);
@@ -119,7 +119,7 @@ test('research, region navigation and source sheets are usable', async ({page}) 
 });
 
 test('Top controls change the actual overview and ranking row counts', async ({page}) => {
-  await page.goto('/');
+  await page.goto('./');
   for (const section of ['시장 개요','게임 순위','스토어 비교']) {
     await page.getByRole('button',{name:section,exact:true}).click();
     for (const count of [10,20,100]) {
@@ -131,7 +131,7 @@ test('Top controls change the actual overview and ranking row counts', async ({p
 });
 
 test('all markets retain each country snapshot and display highest observed ranks', async ({page}) => {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('combobox',{name:'시장',exact:true}).selectOption('all');
   await expect(page.locator('.stats>div').last()).toContainText('320');
   await expect(page.locator('.game-table tbody tr')).toHaveCount(100);
@@ -154,7 +154,7 @@ test('all markets retain each country snapshot and display highest observed rank
 });
 
 test('source back restores the research section, filters, scroll and game detail', async ({page}) => {
-  await page.goto('/');
+  await page.goto('./');
   await page.getByRole('button',{name:'수익 모델',exact:true}).click();
   await page.getByRole('button',{name:'Top 20',exact:true}).click();
   await page.getByRole('textbox',{name:'게임 검색'}).fill('Meowdoku');
@@ -179,7 +179,7 @@ test('source back restores the research section, filters, scroll and game detail
 });
 
 test('six comparison columns remain readable and a seventh selection is rejected', async ({page}) => {
-  await page.goto('/');
+  await page.goto('./');
   const buttons=page.locator('.compare-check:not([disabled])');
   for(let i=0;i<6;i++) await buttons.nth(i).click();
   await expect(page.locator('.compare-tray')).toContainText('6/6');
@@ -203,7 +203,7 @@ for (const width of [1920,1440,834,390]) {
     page.on('pageerror',error=>errors.push(error.message));
     page.on('console',message=>{if(message.type()==='error') errors.push(message.text());});
     await page.setViewportSize({width,height:1000});
-    await page.goto('/');
+    await page.goto('./');
     await page.waitForLoadState('networkidle');
     await expect(page.locator('h1')).toBeVisible();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

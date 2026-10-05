@@ -1,5 +1,5 @@
 # =====================================================================
-# 모바일 게임 시장 분석 — 스프레드시트 생성 코드 (6단계-2: 시장조사 파일 추가 조사까지 반영)
+# 모바일 게임 시장 분석 — 스프레드시트 생성 코드 (6단계-3: 2인 개발 MVP 판단·광고 대비 유입까지 반영)
 #  [1부] 기존 시트 28개를 만드는 코드 (데이터·수식·서식 그대로, 변경 없음)
 #  [2부] 만들어진 시트를 파일 2개로 나눠 저장
 #        A) 시장조사.xlsx               : 시장·지역·플랫폼·벤치마크 '숫자' 자료
@@ -1846,6 +1846,378 @@ for k, (a, b_) in enumerate([
     g.cell(nr + k, 1, a).font = BB; g.cell(nr + k, 1).border = BD
     c = g.cell(nr + k, 2, b_); c.font = B; c.border = BD; c.alignment = Alignment(wrap_text=True, vertical="top")
 
+# ===================== 6단계-3: 게임전략 파일 — 2인 개발 MVP 판단 · 광고 대비 유입 (2026-10-05) =====================
+# 새 시트 2개('2인 개발 MVP 판단', '광고 대비 유입')와
+# '세부 장르' 맨 아래 별도 표(매출 Top100의 새 세부 장르 5개), '개요' 맨 아래 2줄을 추가합니다. 기존 칸은 바꾸지 않습니다.
+# 새 시트 수식은 [1부]의 옛 시트 이름으로 씀 → [2부]가 게임전략 파일의 '(참조)' 복사본 이름으로 자동 변환
+from openpyxl.worksheet.datavalidation import DataValidation
+from openpyxl.formatting.rule import FormulaRule
+
+OK_FILL = PatternFill("solid", fgColor="E2EFDA")    # 2인 가능
+MID_FILL = PatternFill("solid", fgColor="FFF2CC")   # 조건부
+NO_FILL = PatternFill("solid", fgColor="FCE4D6")    # 2인 어려움
+def blue_in(c, fmt=None):
+    c.font = BLUE_IN; c.fill = YEL; c.border = BD; c.alignment = Alignment(horizontal="center", vertical="center")
+    if fmt: c.number_format = fmt
+def judge_colors(ws, rng, col_letter, first_row):
+    for txt, fill in (("2인 가능", OK_FILL), ("조건부 (범위를 줄이면)", MID_FILL), ("2인 어려움", NO_FILL)):
+        ws.conditional_formatting.add(rng, FormulaRule(formula=[f'${col_letter}{first_row}="{txt}"'], fill=fill))
+
+# ---------- (1) 1-4 세부 장르: 매출 Top100에서 새로 생긴 세부 장르 5개 (사용자 승인, 아래쪽 별도 표) ----------
+ws = wb["세부 장르"]
+base = ws.max_row
+assert ws.cell(base, 1).value == "합계"
+r0 = base + 2
+ws.cell(r0, 1, "6단계-3 추가 (2026-10-05): '3-2 매출 Top100'에서 새로 생긴 세부 장르 5개. 위 표는 1-1·1-2 무료 차트만 세므로 C~E열은 0이 정상이고, F열은 매출 Top100에서 센 수(수식)입니다.").font = NOTE
+head_row(ws, r0 + 1, ["대분류", "세부 장르", "App Store 수", "Google Play 수", "합계", "매출 Top100 수 (3-2)"])
+new_subs = [("카드·보드·카지노", "빙고"), ("카드·보드·카지노", "포커"), ("스포츠", "골프"),
+            ("RPG", "수집형(가챠) RPG"), ("RPG", "방치형 RPG")]
+for m_, s_ in new_subs:
+    assert any(r[3] == m_ and r[4] == s_ for r in gross), (m_, s_)
+    assert not any(r[3] == m_ and r[4] == s_ for r in ios + gp), (m_, s_)
+for k, (m_, s_) in enumerate(new_subs):
+    i = r0 + 2 + k
+    put(ws, i, [m_, s_,
+                f"=COUNTIFS('App Store Top100'!$D$2:$D$101,A{i},'App Store Top100'!$E$2:$E$101,B{i})",
+                f"=COUNTIFS('Google Play Top100'!$D$2:$D$101,A{i},'Google Play Top100'!$E$2:$E$101,B{i})",
+                f"=C{i}+D{i}",
+                f"=COUNTIFS('매출 Top100'!$D$2:$D$101,A{i},'매출 Top100'!$E$2:$E$101,B{i})"])
+nl = r0 + 1 + len(new_subs)
+put(ws, nl + 1, ["합계", "", f"=SUM(C{r0+2}:C{nl})", f"=SUM(D{r0+2}:D{nl})", f"=SUM(E{r0+2}:E{nl})", f"=SUM(F{r0+2}:F{nl})"])
+for c in range(1, 7): ws.cell(nl + 1, c).font = BB
+ws.column_dimensions["F"].width = 18
+
+# ---------- (2) 2인 개발 MVP 판단 ----------
+ws = wb.create_sheet("2인 개발 MVP 판단")
+ws["A1"] = "2인 개발 MVP 판단 — 미국 구글 플레이 매출 Top100 + '③ 다운로드만 높음' 게임 중 2명이 작게 만들 수 있는 후보 찾기"
+ws["A1"].font = TITLE
+ws["A2"] = ("읽는 법: ① 세부 장르마다 5가지 기준을 1~5점(5점 = 2명이 하기 쉬움)으로 매김 → ② 가중치로 100점 만점 점수 계산 → "
+            "③ 게임은 자기 세부 장르의 점수·판정을 받음.  파란 글씨 = 바꿀 수 있는 가정값,  노란 칸 = 분석자 판단·추정")
+ws["A2"].font = NOTE
+# 가정값
+head_row(ws, 4, ["기준", "쉬운 뜻", "5점 (2명이 하기 쉬움)", "1점 (2명이 하기 어려움)", "가중치"])
+crit = [("콘텐츠 양", "레벨·맵·캐릭터·이야기를 얼마나 많이 만들어야 하나", "규칙 하나로 레벨을 자동으로 만들 수 있음 (블록·정렬·솔리테어)", "오픈월드·수십 명 캐릭터·긴 이야기", 0.25),
+        ("서버 필요", "게임 서버를 따로 만들고 돌려야 하나", "인터넷 없이 혼자 플레이 (저장만 기기에)", "실시간 대전·연맹전·거래 (서버가 꼭 필요)", 0.25),
+        ("아트 양", "그림·3D 모델·애니메이션이 얼마나 많이 필요한가", "2D 도형·아이콘 위주", "3D 캐릭터·애니메이션 대량", 0.20),
+        ("라이브 운영 부담", "출시 뒤 이벤트·시즌·밸런스 패치를 얼마나 자주 해야 하나", "업데이트가 거의 없어도 됨", "매주 이벤트·시즌 패스·밸런스 조정 필수", 0.20),
+        ("심사·규제 부담", "스토어 정책·나이 제한·확률 표시 같은 규칙이 얼마나 까다로운가", "특별한 규제 없음", "도박류(소셜 카지노·리얼머니) 정책·나라별 규제", 0.10)]
+for k, (a, b_, c5, c1, w) in enumerate(crit):
+    i = 5 + k
+    put(ws, i, [a, b_, c5, c1, w], wrap=True)
+    ws.cell(i, 1).font = BB
+    blue_in(ws.cell(i, 5), "0%")
+put(ws, 10, ["가중치 합계 (100%가 되게)", "", "", "", "=SUM(E5:E9)"])
+ws.cell(10, 1).font = BB; ws.cell(10, 5).number_format = "0%"
+for i, (lab, val) in enumerate([("'2인 가능' 기준 점수 (이 점수 이상)", 70), ("'조건부' 기준 점수 (이 점수 이상)", 50),
+                                 ("1점 항목이 하나라도 있으면 '2인 어려움'으로 판정 (예/아니오)", "예")], start=12):
+    ws.cell(i, 1, lab).font = BB
+    blue_in(ws.cell(i, 5, val))
+dv_yn = DataValidation(type="list", formula1='"예,아니오"', allow_blank=False); ws.add_data_validation(dv_yn); dv_yn.add("E14")
+ws.cell(12, 6, "← 가중치·기준 점수는 분석자 제안. 바꾸면 아래 점수·판정이 모두 자동으로 바뀜").font = NOTE
+
+# 세부 장르 점수표 (분석자 판단) — (콘텐츠, 서버, 아트, 라이브 운영, 심사·규제), None = 판단 보류
+SUB_SCORE = {
+ ("퍼즐", "정렬·잼"): ((5, 5, 4, 4, 5), "색·물건을 옮겨 정렬하는 규칙 하나로 레벨을 자동 생성하기 쉬움. 3D 잼류는 아트가 조금 더 듦"),
+ ("퍼즐", "블록"): ((5, 5, 5, 4, 5), "끝없는 모드 중심이라 레벨 제작이 거의 없음. 2D 블록 그래픽"),
+ ("퍼즐", "타일·마작·트리플 매치"): ((4, 5, 4, 4, 5), "타일(물건) 그림 세트가 필요하지만 배치는 반자동 생성 가능. 3D 물건형은 아트 부담↑"),
+ ("퍼즐", "로직·두뇌 트릭"): ((3, 5, 4, 4, 5), "스도쿠류는 자동 생성, 두뇌 트릭류는 판마다 아이디어를 손으로 만들어야 함"),
+ ("퍼즐", "탭 탈출"): ((5, 5, 5, 4, 5), "화살표·블록을 탭해 빼내는 규칙. 레벨 자동 생성 쉬움, 2D 위주"),
+ ("퍼즐", "워드"): ((4, 5, 5, 4, 5), "단어 데이터가 콘텐츠. 나라·언어마다 단어 목록을 새로 만들어야 함(현지화 부담)"),
+ ("퍼즐", "매치3"): ((2, 4, 3, 2, 5), "수백~수천 판을 손으로 맞춰야 하고, 매출 상위작은 꾸미기 메타·주간 이벤트가 큼"),
+ ("퍼즐", "머지"): ((2, 4, 2, 2, 5), "합칠 물건 그림이 아주 많고 이야기·이벤트 운영 부담이 큼"),
+ ("퍼즐", "픽셀·컬러 아트"): ((4, 5, 3, 4, 5), "그림 자료가 곧 콘텐츠. 그림을 자동 변환하면 양은 줄일 수 있음"),
+ ("퍼즐", "숨은그림"): ((2, 5, 1, 3, 5), "판마다 큰 그림을 새로 그려야 해서 아트 부담이 가장 큼"),
+ ("퍼즐", "기타 퍼즐"): (None, "'기타'로 묶인 장르라 한 번에 판단 불가 — 게임별 확인 필요"),
+ ("하이퍼·하이브리드 캐주얼", "물리 파괴"): ((4, 5, 3, 3, 5), "물리 엔진 손맛 조정이 핵심. 저폴리 3D, 레벨 수는 적어도 됨"),
+ ("하이퍼·하이브리드 캐주얼", "하이브리드 캐주얼"): ((3, 5, 3, 3, 5), "간단한 핵심 놀이 + 성장(업그레이드) 메타. 메타 설계 분량이 중간"),
+ ("하이퍼·하이브리드 캐주얼", "군중 러너·디펜스"): ((3, 5, 3, 3, 5), "3D 군중 표현·성능 최적화가 필요. 레벨은 반복 구조"),
+ ("카드·보드·카지노", "보드·주사위 소셜캐주얼"): ((2, 2, 2, 1, 3), "친구 이벤트·경제를 서버가 관리. 매주 이벤트가 매출의 핵심(라이브 운영 1점)"),
+ ("카드·보드·카지노", "소셜 카지노"): ((3, 2, 2, 1, 1), "도박 모사 게임 정책·나이 제한, 매일 이벤트"),
+ ("카드·보드·카지노", "빙고"): ((3, 2, 3, 1, 2), "여럿이 함께하는 방·이벤트 운영. 도박 모사로 분류될 수 있음"),
+ ("카드·보드·카지노", "포커"): ((4, 1, 4, 2, 1), "실시간 대전 서버 필수, 도박 모사 규제"),
+ ("카드·보드·카지노", "솔리테어"): ((5, 5, 4, 4, 5), "카드 배치 자동 생성, 오프라인 가능. 매출형은 맵·수집 메타가 붙음"),
+ ("카드·보드·카지노", "트레이딩 카드"): ((1, 1, 2, 1, 3), "카드 그림 수백 장, 대전·거래·확률형 뽑기 서버"),
+ ("카드·보드·카지노", "클래식 보드"): ((5, 2, 5, 4, 5), "규칙은 이미 있음. 온라인 대전이 핵심이면 서버 필요(2점) — AI 상대로 줄이면 MVP 가능"),
+ ("전략", "4X·SLG"): ((1, 1, 1, 1, 3), "연맹전·서버 시즌 운영, 대규모 콘텐츠"),
+ ("전략", "실시간 카드 배틀"): ((2, 1, 2, 1, 3), "실시간 대전 서버와 밸런스 패치가 필수"),
+ ("RPG", "수집형(가챠) RPG"): ((1, 2, 1, 1, 3), "캐릭터 대량 제작·확률형 아이템 표시 의무·주간 운영"),
+ ("RPG", "방치형 RPG"): ((2, 3, 2, 2, 3), "오프라인 진행은 가능하지만 캐릭터·성장 경제 설계 분량이 큼"),
+ ("RPG", "수집형 오픈월드"): ((1, 1, 1, 1, 3), "대형 3D 세계·캐릭터 — 대형 스튜디오 규모"),
+ ("RPG", "위치기반 수집"): ((1, 1, 2, 1, 3), "지도 데이터·위치 서버·안전 정책"),
+ ("액션·슈팅", "배틀로얄"): ((1, 1, 1, 1, 4), "실시간 대규모 대전 서버, 3D 맵·무기"),
+ ("액션·슈팅", "팀 대전 슈터"): ((1, 1, 1, 1, 4), "실시간 대전 서버, 3D 캐릭터·맵"),
+ ("액션·슈팅", "스나이퍼"): ((3, 4, 2, 3, 4), "혼자 하는 미션형이면 서버 부담은 적지만 3D 아트가 필요"),
+ ("스포츠", "축구"): ((1, 1, 1, 2, 4), "선수·리그 라이선스와 3D 애니메이션"),
+ ("스포츠", "골프"): ((3, 2, 2, 2, 5), "물리 손맛 + 코스 3D. 상위작은 1:1 대전(서버)"),
+ ("시뮬레이션", "농장·타운 빌딩"): ((1, 3, 1, 1, 5), "건물·아이템 수백 개와 꾸준한 이벤트"),
+ ("시뮬레이션", "샌드박스"): ((3, 4, 3, 3, 4), "블록(복셀) 그래픽은 단순하지만 만들기 도구 범위가 넓음"),
+ ("기타(UGC·리워드)", "UGC 플랫폼"): ((1, 1, 1, 1, 3), "플랫폼 자체(사용자 제작 도구·서버·심사)라 2인 범위 밖"),
+ ("파티·음악", "밈 챌린지"): ((4, 5, 3, 2, 2), "유행 밈을 계속 바꿔야 함(운영), 밈 저작권·초상권 위험"),
+ ("확인 불가", "-"): (None, "장르를 확인하지 못한 게임 — 판단 보류"),
+}
+cand_keys = []
+def _gen(name):
+    for r in gross:
+        if r[1] == name: return (r[3], r[4])
+    for r in gp:
+        if r[1] == name: return (r[3], r[4])
+    return ("확인 불가", "-")
+cands = [n for n, g_, f_ in rows33 if isinstance(g_, int) or
+         (isinstance(f_, int) and f_ <= 30 and not (isinstance(g_, int) and g_ <= 30))]
+from collections import Counter as _C
+key_cnt = _C(_gen(n) for n in cands)
+missing = [k for k in key_cnt if k not in SUB_SCORE]
+assert not missing, missing
+sub_rows = sorted(key_cnt, key=lambda k: (-key_cnt[k], k))
+
+BT = 17   # 세부 장르 점수표 머리 줄
+ws.cell(BT - 1, 1, "① 세부 장르 점수표 — C~G열 점수는 분석자 판단(노란 칸). 장르의 일반적인 구조 기준이며 게임마다 다를 수 있음").font = TITLE
+head_row(ws, BT, ["대분류", "세부 장르", "콘텐츠 양", "서버 필요", "아트 양", "라이브 운영 부담", "심사·규제 부담",
+                  "점수 (100점, 수식)", "판정 (수식)", "판단 근거 (분석자)", "찾기용 키 (수식)", "후보 게임 수 (수식)"])
+B1, BL = BT + 1, BT + len(sub_rows)
+for k, key in enumerate(sub_rows):
+    j = B1 + k
+    sc, why = SUB_SCORE[key]
+    put(ws, j, [key[0], key[1]] + (list(sc) if sc else ["", "", "", "", ""]) + [None, None, why, None, None], wrap=True)
+    for c in range(3, 8):
+        ws.cell(j, c).fill = YEL; ws.cell(j, c).alignment = Alignment(horizontal="center", vertical="top")
+    ws.cell(j, 10).fill = YEL
+    ws.cell(j, 8).value = (f'=IF(COUNT(C{j}:G{j})<5,"",ROUND((C{j}*$E$5+D{j}*$E$6+E{j}*$E$7+F{j}*$E$8+G{j}*$E$9)'
+                           f'/SUM($E$5:$E$9)/5*100,0))')
+    ws.cell(j, 9).value = (f'=IF(H{j}="","판단 보류",IF(AND($E$14="예",MIN(C{j}:G{j})=1),"2인 어려움",'
+                           f'IF(H{j}>=$E$12,"2인 가능",IF(H{j}>=$E$13,"조건부 (범위를 줄이면)","2인 어려움"))))')
+    ws.cell(j, 11).value = f'=A{j}&"|"&B{j}'
+    for c in (8, 9, 12): ws.cell(j, c).alignment = Alignment(horizontal="center", vertical="top")
+judge_colors(ws, f"I{B1}:I{BL}", "I", B1)
+
+# 추천 후보 (분석자 제안)
+DT = BL + 3
+ws.cell(DT - 1, 1, "② 2인 개발 추천 후보 — 게임 선택·역할·기간·꼭 넣을 것·주의점은 모두 분석자 제안/추정 (점수·순위는 수식으로 가져옴)").font = TITLE
+head_row(ws, DT, ["게임명", "세부 장르 (수식)", "매출 순위 (수식)", "무료 순위 (수식)", "점수 (수식)", "3-3 유형 (수식)",
+                  "판정 (수식)", "2인 역할 (분석자 가정)", "MVP 기간 (분석자 추정)", "MVP에 꼭 넣을 것 (분석자 제안)", "주의점"])
+picks = [
+ ("Magic Sort!", "개발 1 + 기획·아트 1", "약 2~3개월",
+  "물 색 정렬 규칙, 레벨 자동 생성기와 난이도 곡선, 보상형 광고(되돌리기·병 추가)",
+  "Liftoff 2025 보고서가 '물 정렬 퍼즐 첫 하이브리드 캐주얼 성공작'으로 소개. 같은 규칙 경쟁작이 많아 차별점 1개가 필요"),
+ ("Match Factory!", "개발 1 + 3D 아트·기획 1", "약 3~4개월",
+  "3D 물건 3개 모으기 규칙, 물건 모델 세트(에셋 구매 검토), 시간 제한·부스터",
+  "3D 물건 아트가 가장 큰 일 — 에셋 구매 여부가 기간을 좌우"),
+ ("Cube Land Puzzle Game", "개발 1 + 기획·아트 1", "약 2~3개월",
+  "블록 놓기·줄 지우기 규칙, 점수·콤보, 끝없는 모드와 광고",
+  "Block Blast!·Woodoku Blast 같은 강자가 무료 상위에 있음(1-2) — 테마·연출 차별화 필요"),
+ ("Tiki Solitaire TriPeaks", "개발 1 + 기획·아트 1", "약 2~3개월",
+  "트라이픽스 규칙, 카드 배치 자동 생성, 테마 배경 몇 개, 부스터",
+  "매출 상위 솔리테어는 맵·수집 메타가 있음 — MVP 뒤에 메타를 붙이는 순서"),
+ ("Royal Smash! - Physics Puzzle", "개발 1 + 3D 아트·기획 1", "약 3~4개월",
+  "물리 파괴 손맛, 짧은 레벨 묶음, 보상형 광고",
+  "물리 튜닝과 3D 저폴리 아트가 개발 부담의 중심"),
+ ("Arrow Puzzle: Tap Puzzle Games", "개발 1 + 기획·아트 1", "약 1.5~2.5개월",
+  "화살표 방향대로 탭해서 빼내기 규칙, 레벨 생성기, 힌트(광고 보고 받기)",
+  "매출 Top100 밖(③ 유형) → 광고 수익형일 가능성(추정). 결제 매출 기대는 낮게"),
+ ("Solitaire Associations Journey", "개발 1 + 기획·아트 1", "약 2~3개월",
+  "단어 묶음 카드 규칙, 영어 단어 데이터, 하루 한 판 퍼즐",
+  "언어마다 단어 데이터를 새로 만들어야 함 — 처음엔 영어(미국)만"),
+]
+names33 = [n for n, g_, f_ in rows33]
+D1_, DL_ = DT + 1, DT + len(picks)
+CT = DL_ + 14          # 전체 게임 목록 머리 줄 (아래 C1_~CL_)
+C1_, CL_ = CT + 1, CT + len(rows33)
+def cl(col): return f"${col}${C1_}:${col}${CL_}"
+for k, (nm, role, dur, must, warn) in enumerate(picks):
+    assert nm in names33 and nm in cands, nm
+    i = D1_ + k
+    put(ws, i, [nm, None, None, None, None, None, None, role, dur, must, warn], wrap=True)
+    ws.cell(i, 1).font = BB
+    for c, src in zip(range(2, 8), ["C", "D", "E", "H", "F", "I"]):
+        ws.cell(i, c).value = f'=INDEX({cl(src)},MATCH($A{i},{cl("A")},0))'
+        ws.cell(i, c).alignment = Alignment(horizontal="center", vertical="top", wrap_text=True)
+    for c in (8, 9, 10, 11): ws.cell(i, c).fill = YEL
+judge_colors(ws, f"G{D1_}:G{DL_}", "G", D1_)
+
+# 메모
+notes24 = [
+ "이 표는 '2명이 MVP(최소 기능 제품)를 만들 수 있나'만 봅니다. 돈을 벌 수 있는지는 매출 순위(4-5)·광고 대비 유입(3-1)·마케팅 실행안(3-4, 다음 단계)에서 따로 봅니다.",
+ "후보 = 매출 Top100 안 게임 + 3-3 분류가 '③ 다운로드만 높음'인 게임 (G열 수식). '4-6 매출-다운로드 비교(참조)'의 B2·B3 기준값을 바꾸면 ③ 후보도 함께 바뀝니다.",
+ "세부 장르는 '4-5 매출 Top100(참조)' → 없으면 '4-4 Google Play Top100(참조)'에서 찾습니다(수식). 세 시트 모두 시장조사.xlsx의 참조용 복사본입니다.",
+ "세부 장르 점수(C~G열)·역할·MVP 기간은 분석자 판단/추정이며 근거 수치가 없습니다. 실제 게임별 개발 인원·기간·개발비·매출액: 비공개 (공개 자료로 확인 불가).",
+ "공개 자료로 대신 쓸 수 있는 지표: 매출 순위·무료 순위(AppBrain, 2026-10-04), AppBrain 추정 누적 설치 수(3-3 D열, 추정), 스토어 출시일(3-3 G열, 대부분 미조사).",
+ "'1점 항목이 있으면 어려움' 규칙(E14)은 실시간 서버·대형 콘텐츠처럼 하나만 있어도 2명이 감당하기 어려운 경우를 거르려는 분석자 제안입니다. '아니오'로 바꾸면 점수만으로 판정합니다.",
+ "아래 ③ 전체 목록은 3-3의 172개 게임 전부이며, '후보 아님' 줄은 점수를 매기지 않습니다. 맨 위 머리 줄의 필터로 '후보'만 골라 볼 수 있습니다.",
+]
+for k, t in enumerate(notes24):
+    ws.cell(DL_ + 2 + k, 1, t).font = NOTE
+
+# 요약 (G4~I9)
+head_row(ws, 4, ["판정", "후보 게임 수 (수식)", "세부 장르 수 (수식)"], c0=7)
+for k, lab in enumerate(["2인 가능", "조건부 (범위를 줄이면)", "2인 어려움", "판단 보류"]):
+    i = 5 + k
+    put(ws, i, [lab, f'=COUNTIFS({cl("I")},G{i},{cl("G")},"후보")', f'=COUNTIF($I${B1}:$I${BL},G{i})'], c0=7)
+put(ws, 9, ["합계", "=SUM(H5:H8)", "=SUM(I5:I8)"], c0=7)
+for c in (7, 8, 9): ws.cell(9, c).font = BB
+judge_colors(ws, "G5:G8", "G", 5)
+
+# ③ 전체 목록
+ws.cell(CT - 1, 1, "③ 전체 게임 목록 (3-3의 172개) — 장르·순위·유형은 참조 시트에서 수식으로 가져옴").font = TITLE
+head_row(ws, CT, ["게임명", "대분류 (수식)", "세부 장르 (수식)", "매출 순위 (수식)", "무료 순위 (수식)", "3-3 유형 (수식)",
+                  "후보 여부 (수식)", "점수 (수식)", "판정 (수식)", "", "찾기용 키 (수식)"])
+MD_ = "'매출-다운로드 비교'!"
+m1, mL = H0 + 1, H0 + len(rows33)
+GT_, GP_ = "'매출 Top100'!", "'Google Play Top100'!"
+for k, (nm, g_, f_) in enumerate(rows33):
+    i = C1_ + k
+    put(ws, i, [nm])
+    ws.cell(i, 2).value = (f'=IFERROR(INDEX({GT_}$D$2:$D$101,MATCH($A{i},{GT_}$B$2:$B$101,0)),'
+                           f'IFERROR(INDEX({GP_}$D$2:$D$101,MATCH($A{i},{GP_}$B$2:$B$101,0)),"확인 불가"))')
+    ws.cell(i, 3).value = (f'=IFERROR(INDEX({GT_}$E$2:$E$101,MATCH($A{i},{GT_}$B$2:$B$101,0)),'
+                           f'IFERROR(INDEX({GP_}$E$2:$E$101,MATCH($A{i},{GP_}$B$2:$B$101,0)),"-"))')
+    for c, src in ((4, "B"), (5, "C"), (6, "H")):
+        ws.cell(i, c).value = f'=INDEX({MD_}${src}${m1}:${src}${mL},MATCH($A{i},{MD_}$A${m1}:$A${mL},0))'
+    ws.cell(i, 7).value = f'=IF(OR(ISNUMBER(D{i}),F{i}="③ 다운로드만 높음"),"후보","후보 아님")'
+    ws.cell(i, 8).value = f'=IF(G{i}<>"후보","",IFERROR(INDEX($H${B1}:$H${BL},MATCH(K{i},$K${B1}:$K${BL},0)),""))'
+    ws.cell(i, 9).value = f'=IF(G{i}<>"후보","-",IFERROR(INDEX($I${B1}:$I${BL},MATCH(K{i},$K${B1}:$K${BL},0)),"판단 보류"))'
+    ws.cell(i, 11).value = f'=B{i}&"|"&C{i}'
+    for c in range(2, 12):
+        ws.cell(i, c).font = B; ws.cell(i, c).border = BD
+    for c in (4, 5, 7, 8, 9): ws.cell(i, c).alignment = Alignment(horizontal="center")
+judge_colors(ws, f"I{C1_}:I{CL_}", "I", C1_)
+# 후보 게임 수 (세부 장르 표 L열)
+for j in range(B1, BL + 1):
+    ws.cell(j, 12).value = f'=COUNTIFS({cl("K")},K{j},{cl("G")},"후보")'
+ws.auto_filter.ref = f"A{CT}:K{CL_}"
+for col, w in zip("ABCDEFGHIJKL", [34, 24, 22, 22, 12, 22, 18, 14, 22, 52, 30, 12]):
+    ws.column_dimensions[col].width = w
+for i in range(5, 10): ws.row_dimensions[i].height = 32
+ws.freeze_panes = "B4"
+assert len(cands) == 118, len(cands)
+
+# ---------- (3) 광고 대비 유입 ----------
+ws = wb.create_sheet("광고 대비 유입")
+ws["A1"] = "광고 대비 유입 — 광고비 → 설치 수 → D1·D7·D30에 다시 오는 사람 수"; ws["A1"].font = TITLE
+ws["A2"] = ("읽는 법: 광고비 ÷ CPI(설치 1번에 드는 광고비) = 설치 수 → 설치 수 × 리텐션(며칠 뒤 다시 오는 비율) = 그날 남는 사람 수.  "
+            "파란 글씨 = 바꿀 수 있는 가정값,  노란 칸 = 2차 인용·섞인 가정·확인 불가")
+ws["A2"].font = NOTE
+ws["A4"] = "꼭 읽을 주의점 3가지"; ws["A4"].font = BB
+caveats = [
+ "① 출처마다 CPI가 10배 넘게 달라요. 예) 같은 '캐주얼 게임 Android'가 Liftoff 원문은 $0.14인데, 한 2026년 블로그(digitalapplied.com)는 $1.12로 적음 — 그 블로그는 여러 보고서를 섞어 원문 확인이 안 돼 쓰지 않음. 이 표는 원문을 확인한 값만 '원문', 블로그 등을 거친 값은 '2차 인용'(노란 칸)으로 나눔.",
+ "② 시장 전체 값이 아니에요. Liftoff 보고서의 CPI는 측정 회사 Singular의 데이터(노출 1.1조·설치 24억·광고비 $119억)이고, Adjust 값은 Adjust가 추적하는 앱만의 값이에요(Adjust 스스로 '전체 시장을 반영하지 않을 수 있다'고 밝힘, p.8).",
+ "③ '지역 × OS × 장르'를 모두 나눈 공개 값은 없어요. 지역별 값은 Adjust(iOS+Android 합산, 게임 전체), OS·장르별 값은 Liftoff(전 세계)뿐이라, 둘을 섞은 시나리오(S5~S8)는 '섞인 가정'이에요. 블로그에 도는 '미드코어 북미 $5.45·남미 $0.27'은 원문을 찾지 못해 쓰지 않음.",
+]
+for k, t in enumerate(caveats):
+    c = ws.cell(5 + k, 1, t); c.font = B; c.fill = YEL
+
+# CPI 출처표
+AT = 10
+ws.cell(AT - 1, 1, "① CPI 출처표 (설치 1번에 드는 광고비, 미국 달러)").font = TITLE
+head_row(ws, AT, ["ID", "지역", "OS", "장르", "CPI ($)", "데이터 기간", "자료 등급", "비고", "출처 (이름 · URL)"])
+ADJ = "Adjust, The gaming app insights report: 2026 edition, p.28~29 (Adjust 추적 앱 집계, 2024-01~2026-01) — 원문 PDF 게시본 https://investgame.net/wp-content/uploads/2026/03/2026-03-26-gaming-app-insights-report-2026_wp.pdf (2026-10-05 조회)"
+LFT = "Liftoff·Singular, 2025 Casual Gaming Apps Report — 'CPI by genre by platform' (Singular 데이터 2024-02~2025-02) https://liftoff.ai/2025-casual-gaming-apps-report/ (2026-10-05 조회)"
+STA = "Statista, Cost per install (CPI) of gaming apps worldwide Feb 2024–Feb 2025, by genre and platform (출처 표기: Liftoff, 2025-04-29) https://www.statista.com/statistics/1241651/global-cpi-gaming-apps-genre-platform/"
+MIS = "Mistplay 블로그, How much does mobile user acquisition cost in 2026? (Liftoff 2025 보고서 인용) https://business.mistplay.com/resources/user-acquisition-cost"
+GDR = "GameDev Reports, Liftoff & Singular: Casual Games in 2025 (요약) https://gamedevreports.substack.com/p/liftoff-and-singular-casual-games"
+cpi_rows = [
+ ("C01", "전 세계", "iOS+Android 합산", "게임 전체", 0.56, "2025년", "원문", "2024년 대비 +30%", ADJ),
+ ("C02", "북미", "iOS+Android 합산", "게임 전체", 1.68, "2025년", "원문", "2024년 $1.28", ADJ),
+ ("C03", "미국", "iOS+Android 합산", "게임 전체", 1.71, "2025년", "원문", "2024년 $1.31", ADJ),
+ ("C04", "남미 (LATAM)", "iOS+Android 합산", "게임 전체", 0.14, "2025년", "원문", "2024년 대비 +40%", ADJ),
+ ("C05", "아시아태평양 (APAC)", "iOS+Android 합산", "게임 전체", 0.27, "2025년", "원문", "2024년 $0.21. 일본·한국 등 나라별 값은 그래프에만 있어 확인 불가", ADJ),
+ ("C06", "유럽", "iOS+Android 합산", "게임 전체", 0.53, "2025년", "원문", "2024년 $0.36", ADJ),
+ ("C07", "전 세계", "iOS+Android 합산", "슬롯", 4.47, "2025년", "원문", "2025년 장르 중 가장 비쌈", ADJ),
+ ("C08", "전 세계", "iOS+Android 합산", "방치형 RPG", 3.19, "2025년", "원문", "", ADJ),
+ ("C09", "전 세계", "iOS+Android 합산", "전략", 1.03, "2025년", "원문", "", ADJ),
+ ("C10", "전 세계", "iOS", "캐주얼 (하이퍼캐주얼 포함)", 1.41, "2024-02~2025-02", "원문", "", LFT),
+ ("C11", "전 세계", "Android", "캐주얼 (하이퍼캐주얼 포함)", 0.14, "2024-02~2025-02", "원문", "", LFT),
+ ("C12", "전 세계", "iOS", "카지노", 21.03, "2024-02~2025-02", "원문", "", LFT),
+ ("C13", "전 세계", "Android", "카지노", 4.10, "2024-02~2025-02", "2차 인용", "원문은 그래프 이미지라 직접 확인 못 함", MIS),
+ ("C14", "전 세계", "iOS", "퍼즐", 2.80, "2024-02~2025-02", "2차 인용", "Statista 표의 열 이름이 안 보여, 같은 표 캐주얼 줄(0.14·1.41)이 원문 Android·iOS 값과 같은 것으로 열 순서를 판단", STA),
+ ("C15", "전 세계", "Android", "퍼즐", 0.64, "2024-02~2025-02", "2차 인용", "C14와 같은 방법으로 열 순서 판단", STA),
+ ("C16", "전 세계", "Android", "RPG", 4.29, "2024-02~2025-02", "2차 인용", "요약 글에만 있음 (원문 그래프 이미지)", GDR),
+ ("C17", "북미·남미·아시아 각각", "iOS / Android 각각", "퍼즐 등 장르 각각", "확인 불가", "—", "확인 불가", "세 가지를 모두 나눈 공개 원문 값을 찾지 못함", "—"),
+]
+A1_, AL_ = AT + 1, AT + len(cpi_rows)
+for k, row in enumerate(cpi_rows):
+    i = A1_ + k
+    put(ws, i, list(row))
+    ws.cell(i, 5).number_format = '"$"0.00'
+    ws.cell(i, 5).font = BB
+    for c in (1, 3, 5, 7): ws.cell(i, c).alignment = Alignment(horizontal="center", vertical="top")
+    ws.cell(i, 8).alignment = Alignment(vertical="top", wrap_text=True)
+    if row[6] != "원문":
+        for c in range(1, 10): ws.cell(i, c).fill = YEL
+
+# 계산표
+BT2 = AL_ + 3
+ws.cell(BT2 - 1, 1, "② 계산표 — 시나리오 조합·광고비는 분석자 가정(파란 글씨, 바꿔 쓰는 칸). 리텐션은 '4-1 지역 벤치마크(참조)'에서 수식으로 가져옴").font = TITLE
+head_row(ws, BT2, ["시나리오", "설명", "광고비 ($)", "CPI 출처 ID (A열에서 선택)", "출처 CPI ($)", "직접 입력 CPI ($) (비우면 출처값)",
+                   "쓰는 CPI ($)", "설치 수", "리텐션 지역", "리텐션 구간", "D1 리텐션", "D7 리텐션", "D30 리텐션",
+                   "D1에 남는 사람", "D7에 남는 사람", "D30에 남는 사람", "D7에 100명 남기려면 필요한 광고비 ($)"])
+scen = [
+ ("S1", "미국 · 게임 전체 평균 CPI · 보통 게임(중앙값 P50) 리텐션", "C03", "북미", "P50", False),
+ ("S2", "미국 · 게임 전체 평균 CPI · 상위 10%(P90) 리텐션 — 잘 만든 게임 목표", "C03", "북미", "P90", False),
+ ("S3", "남미 · 게임 전체 평균 CPI · P50 리텐션", "C04", "남미", "P50", False),
+ ("S4", "아시아태평양 CPI · 아시아 P50 리텐션 (APAC과 GameAnalytics '아시아'는 범위가 조금 다름)", "C05", "아시아", "P50", True),
+ ("S5", "iOS 캐주얼 CPI(전 세계) + 북미 P50 리텐션 — 섞인 가정", "C10", "북미", "P50", True),
+ ("S6", "Android 캐주얼 CPI(전 세계) + 북미 P50 리텐션 — 섞인 가정", "C11", "북미", "P50", True),
+ ("S7", "iOS 퍼즐 CPI(전 세계, 2차 인용) + 북미 P50 리텐션 — 섞인 가정", "C14", "북미", "P50", True),
+ ("S8", "Android 퍼즐 CPI(전 세계, 2차 인용) + 북미 P50 리텐션 — 섞인 가정", "C15", "북미", "P50", True),
+]
+RB = "'지역 벤치마크'!"
+def ret(i, met):
+    rng = lambda col: f"{RB}${col}$2:${col}${REGLAST}"
+    s = lambda col: f'SUMIFS({rng(col)},{rng("A")},$I{i},{rng("B")},"{met}")'
+    return f'=IF($J{i}="P50",{s("C")},IF($J{i}="P90",{s("D")},IF($J{i}="P99",{s("E")},"")))'
+S1_, SL_ = BT2 + 1, BT2 + len(scen)
+for k, (sid, desc, cid, reg_, q, mixed) in enumerate(scen):
+    i = S1_ + k
+    put(ws, i, [sid, desc, 1000, cid, None, None, None, None, reg_, q], wrap=True)
+    ws.cell(i, 1).font = BB
+    if mixed: ws.cell(i, 2).fill = YEL
+    for c, fmt in ((3, '"$"#,##0'), (4, None), (6, '"$"0.00'), (9, None), (10, None)):
+        blue_in(ws.cell(i, c), fmt)
+    ws.cell(i, 5).value = f'=IFERROR(INDEX($E${A1_}:$E${AL_},MATCH($D{i},$A${A1_}:$A${AL_},0)),"")'
+    ws.cell(i, 7).value = f'=IF($F{i}<>"",$F{i},$E{i})'
+    ws.cell(i, 8).value = f'=IFERROR($C{i}/$G{i},"")'
+    ws.cell(i, 11).value = ret(i, "D1 리텐션")
+    ws.cell(i, 12).value = ret(i, "D7 리텐션")
+    ws.cell(i, 13).value = ret(i, "D30 리텐션")
+    for c, src in ((14, "K"), (15, "L"), (16, "M")):
+        ws.cell(i, c).value = f'=IFERROR($H{i}*{src}{i},"")'
+    ws.cell(i, 17).value = f'=IFERROR(100/$L{i}*$G{i},"")'
+    for c, fmt in ((5, '"$"0.00'), (7, '"$"0.00'), (8, "#,##0"), (11, "0.00%"), (12, "0.00%"), (13, "0.00%"),
+                   (14, "#,##0"), (15, "#,##0"), (16, "#,##0"), (17, '"$"#,##0')):
+        ws.cell(i, c).number_format = fmt
+        ws.cell(i, c).alignment = Alignment(horizontal="center", vertical="top")
+dv_id = DataValidation(type="list", formula1=f"$A${A1_}:$A${AL_-1}", allow_blank=False)
+dv_rg = DataValidation(type="list", formula1='"북미,중미,남미,아시아"', allow_blank=False)
+dv_q = DataValidation(type="list", formula1='"P50,P90,P99"', allow_blank=False)
+for dv, col in ((dv_id, "D"), (dv_rg, "I"), (dv_q, "J")):
+    ws.add_data_validation(dv); dv.add(f"{col}{S1_}:{col}{SL_}")
+
+# 메모
+notes31 = [
+ "리텐션: '4-1 지역 벤치마크(참조)' = GameAnalytics 2026 보고서 지역 표(2025년 주간 데이터의 연평균, 전 장르 합산). P50 = 중앙값(보통 게임), P90 = 상위 10%, P99 = 상위 1%. 동남아는 이 표에 없음(시장조사 2-7 참고).",
+ "D30: 4-1(참조)의 GameAnalytics 2026 값은 D30이라 그대로 씀. 2025 보고서(첨부 PDF)는 D28을 써서 직접 비교에 주의.",
+ "장르별 리텐션은 이 표에 섞지 않음 — '4-3 장르 판독 요약(참조)'의 판독값(차트를 눈으로 읽은 값) 참고.",
+ "광고 없이 들어오는 사람(오가닉)은 계산에 넣지 않음. 참고: Adjust 2025 게임 유료:오가닉 설치 비율 전 세계 중앙값 3.33 (2024년 2.07, p.16) — 이 비율을 우리 게임에 그대로 쓸 근거는 없음.",
+ "참고 (투자 회수): Liftoff 2025 — 캐주얼 게임의 30일 광고비 회수율(D30 ROAS) 평균 iOS 47%, Android 15%. 즉 보통은 30일 안에 광고비를 다 되찾지 못함.",
+ "광고비 $1,000과 시나리오 조합은 '같은 돈으로 비교'하려는 분석자 가정. 실제 CPI는 우리 게임 광고를 소액으로 돌려 보면 가장 정확하게 알 수 있음.",
+ "실제 게임별 광고비·CPI·설치 수: 비공개. 대신 쓸 수 있는 공개 지표: 위 CPI 출처표, 4-1(참조) 리텐션 구간, 3-3 AppBrain 추정 설치 수(추정).",
+]
+for k, t in enumerate(notes31):
+    ws.cell(SL_ + 2 + k, 1, t).font = NOTE
+for col, w in zip("ABCDEFGHIJKLMNOPQ", [8, 44, 18, 24, 11, 16, 12, 30, 16, 11, 11, 11, 11, 11, 11, 11, 16]):
+    ws.column_dimensions[col].width = w
+ws.row_dimensions[BT2].height = 48
+ws.freeze_panes = "A4"
+
+# ---------- (4) 개요 맨 아래 2줄 추가 ----------
+g = wb["개요"]
+nr = g.max_row + 1
+for k, (a, b_) in enumerate([
+    ("6단계-3 출처 (2026-10-05 조회)", "2인 개발 MVP 판단: 3-2 매출 Top100·3-3 매출-다운로드 비교·1-2 Google Play Top100(모두 2026-10-04)을 게임전략 파일에 참조용 복사본으로 두고 수식으로 사용 + 세부 장르 점수는 분석자 판단. 광고 대비 유입: CPI — Adjust 'The gaming app insights report: 2026 edition' p.28~29(2024-01~2026-01), Liftoff·Singular '2025 Casual Gaming Apps Report'(2024-02~2025-02), 2차 인용 3건(Statista·Mistplay·GameDev Reports, 노란 칸). 리텐션 — GameAnalytics 2026 지역 표(4-2 / 게임전략 4-1 참조)."),
+    ("6단계-3 한계", "세부 장르 점수·2인 역할·MVP 기간은 분석자 판단/추정(근거 수치 없음). '지역×OS×장르'를 모두 나눈 CPI는 확인 불가. 광고 채널(3-2)·후킹 영상(3-3)·마케팅 실행안(3-4)은 다음 창에서 진행.")]):
+    g.cell(nr + k, 1, a).font = BB; g.cell(nr + k, 1).border = BD
+    c = g.cell(nr + k, 2, b_); c.font = B; c.border = BD; c.alignment = Alignment(wrap_text=True, vertical="top")
+
 # (예전에는 여기서 시트 28개짜리 파일 1개를 저장했음 → 이제 아래 [2부]에서 파일 2개로 나눠 저장)
 
 
@@ -1871,9 +2243,9 @@ GROUPS_B = {0: ("안내", "404040"), 1: ("성공 비결", "C00000"), 2: ("MVP", 
 FILE_A = [
     (0, "개요", "0-1 개요", "분석 범위·기준일·출처 모음", ""),
     (1, "App Store Top100", "1-1 App Store Top100", "미국 App Store 무료 게임 1~100위와 장르 분류 (기준일 2026-10-03)", ""),
-    (1, "Google Play Top100", "1-2 Google Play Top100", "미국 구글 플레이 무료 게임 1~100위와 장르 분류 (기준일 2026-10-04)", ""),
+    (1, "Google Play Top100", "1-2 Google Play Top100", "미국 구글 플레이 무료 게임 1~100위와 장르 분류 (기준일 2026-10-04)", "게임전략 파일 4-4에 참조용 복사본 있음"),
     (1, "장르 분포", "1-3 장르 분포", "두 스토어 Top100의 대분류별 게임 수·비율 (수식 자동 집계)", ""),
-    (1, "세부 장르", "1-4 세부 장르", "대분류 안 세부 장르별 게임 수 (수식 자동 집계)", ""),
+    (1, "세부 장르", "1-4 세부 장르", "대분류 안 세부 장르별 게임 수 (수식 자동 집계)", "6단계-3: 매출 Top100의 새 세부 장르 5개를 아래쪽 별도 표로 추가"),
     (1, "인사이트", "1-5 인사이트", "미국 차트에서 찾은 핵심 발견", ""),
     (1, "심층 분석 후보", "1-6 심층 분석 후보", "더 깊게 볼 게임 후보와 고른 이유", ""),
     (2, "지역 비교 요약", "2-1 지역 비교 요약", "미국·캐나다 / 남미 / 아시아 / 동남아(인도네시아) 시장 한눈에 비교", "6단계-2에서 동남아 열(E) 추가함"),
@@ -1884,8 +2256,8 @@ FILE_A = [
     (2, "대륙별 OS 분포", "2-6 대륙별 OS 분포", "대륙·국가별 Android/iOS 점유율, 스토어별 게임 매출·다운로드, OS 출시 우선순위(분석자 제안)", "국가 12곳 포함 (StatCounter 2026-09)"),
     (2, "동남아 분석", "2-7 동남아 분석", "인도네시아 Top20·장르 집계·공통 게임·특징 + 동남아 벤치마크(2025 보고서)", "태국·베트남·필리핀·말레이시아 순위는 확인 불가"),
     (3, "매출 순위 원자료", "3-1 매출 순위 원자료", "미국·브라질·일본·한국 구글 플레이 매출 Top10 원자료", ""),
-    (3, "매출 Top100", "3-2 매출 Top100", "미국 구글 플레이 매출 Top100 장르 분류 (기준일 2026-10-04) + 무료 Top100과 장르 비교", ""),
-    (3, "매출-다운로드 비교", "3-3 매출-다운로드 비교", "매출 순위 vs 무료 순위·추정 설치 수 구간, 4가지 유형 자동 분류", ""),
+    (3, "매출 Top100", "3-2 매출 Top100", "미국 구글 플레이 매출 Top100 장르 분류 (기준일 2026-10-04) + 무료 Top100과 장르 비교", "게임전략 파일 4-5에 참조용 복사본 있음"),
+    (3, "매출-다운로드 비교", "3-3 매출-다운로드 비교", "매출 순위 vs 무료 순위·추정 설치 수 구간, 4가지 유형 자동 분류", "게임전략 파일 4-6에 참조용 복사본 있음"),
     (4, "벤치마크 근거", "4-1 벤치마크 근거", "리텐션·수익 등 공개 벤치마크 수치와 출처", ""),
     (4, "지역 벤치마크", "4-2 지역 벤치마크", "지역별 지표 중앙값·상위 구간 표", "게임전략 파일 4-1에 참조용 복사본 있음"),
     (4, "장르 차트 판독값", "4-3 장르 차트 판독값", "GameAnalytics 2025 장르별 차트를 눈으로 읽은 값 (판독값)", "게임전략 파일 4-2에 참조용 복사본 있음"),
@@ -1904,8 +2276,8 @@ FILE_B = [
     (2, "MVP 명세", "2-1 MVP 명세", "게임별 꼭 필요/있으면 좋음/나중에 기능", ""),
     (2, "MVP 검증 목표", "2-2 MVP 검증 목표", "리텐션 합격선·목표 (4-1 지역 벤치마크(참조)에서 가져옴)", ""),
     (2, "장르 연결(추정)", "2-3 장르 연결(추정)", "우리 장르 그룹 ↔ GameAnalytics 장르 연결 (4-3에서 가져옴)", ""),
-    (2, None, "2-4 2인 개발 MVP 판단", "매출 Top100 중 작은 MVP 후보의 2인 개발 가능성", "예정 (3단계)"),
-    (3, None, "3-1 광고 대비 유입", "광고비 → 설치 → D1/D7 남는 유저 계산표", "예정 (3단계)"),
+    (2, "2인 개발 MVP 판단", "2-4 2인 개발 MVP 판단", "매출 Top100 + ③ 다운로드만 높은 게임 중 2명이 만들 수 있는 MVP 후보 (세부 장르 점수 → 게임 판정, 수식)", "6단계-3에서 만듦"),
+    (3, "광고 대비 유입", "3-1 광고 대비 유입", "광고비 → 설치 수 → D1/D7/D30에 남는 사람 수 계산표 (CPI 출처표 + 4-1 리텐션)", "6단계-3에서 만듦"),
     (3, None, "3-2 광고 채널 분석", "유튜브·인스타·페이스북·틱톡·인플루언서 비교", "예정 (3단계)"),
     (3, None, "3-3 후킹 영상 분석", "광고 영상 처음 3초 유형별 빈도", "예정 (3단계)"),
     (3, None, "3-4 마케팅 실행안", "우리 MVP용 마케팅 실행 계획", "예정 (3단계)"),
@@ -1915,6 +2287,12 @@ FILE_B = [
         "원본: 시장조사.xlsx › 4-3 장르 차트 판독값"),
     (4, "장르 판독 요약", "4-3 장르 판독 요약(참조)", "2-3 장르 연결(추정)이 쓰는 표의 복사본",
         "원본: 시장조사.xlsx › 4-4 장르 판독 요약"),
+    (4, "Google Play Top100", "4-4 Google Play Top100(참조)", "2-4가 세부 장르를 찾는 무료 Top100 표의 복사본",
+        "원본: 시장조사.xlsx › 1-2 Google Play Top100"),
+    (4, "매출 Top100", "4-5 매출 Top100(참조)", "2-4가 쓰는 매출 Top100 장르 표의 복사본",
+        "원본: 시장조사.xlsx › 3-2 매출 Top100"),
+    (4, "매출-다운로드 비교", "4-6 매출-다운로드 비교(참조)", "2-4가 쓰는 매출·무료 순위와 4가지 유형 분류의 복사본",
+        "원본: 시장조사.xlsx › 3-3 매출-다운로드 비교"),
 ]
 
 def sheet_list_text(spec, groups, other_file, other_desc):

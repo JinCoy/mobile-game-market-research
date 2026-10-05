@@ -1,6 +1,9 @@
 # PLAYFIELD
 
-개발팀 내부용 모바일 게임 시장 리서치 대시보드. Next.js App Router, TypeScript, React, Phosphor Icons를 사용합니다. 원본 XLSX를 읽어 게임, 순위 기록, 전략 분석, 원자료 시트를 분리합니다.
+공동 개발팀을 위한 모바일 게임 시장 리서치 대시보드. Next.js App Router, TypeScript, React, Phosphor Icons를 사용합니다. 원본 XLSX를 읽어 게임, 순위 기록, 전략 분석, 원자료 시트를 분리합니다.
+
+- 대시보드: [PLAYFIELD](https://jincoy.github.io/mobile-game-market-research/)
+- 공개 저장소: [JinCoy/mobile-game-market-research](https://github.com/JinCoy/mobile-game-market-research)
 
 ## 현재 자료
 
@@ -53,11 +56,13 @@ npm run data:import
 - 조사 게임 수는 누락을 제외하고 중복 게임을 제거합니다. 장르 막대 비율은 스토어의 수집된 순위 슬롯을 분모로 사용하고, 시장 신호의 비율은 확인된 게임 기록을 분모로 사용합니다.
 - 무료·매출 순위는 수량이 아닙니다. AppBrain 추정 누적 설치는 국가별 실제 다운로드가 아닙니다. 캠페인 효과의 인과관계는 미확인입니다.
 
-현재 관심 게임은 브라우저에만 저장됩니다. 로그인, 팀별 접근 제어, 공동 편집, 자동 외부 수집은 구현되어 있지 않습니다. 내부 자료를 외부에 공개하기 전 접근 제어를 마련해야 합니다.
+관심 게임은 각 브라우저에만 저장됩니다. 로그인, 팀별 접근 제어, 공동 편집, 자동 외부 수집은 구현되어 있지 않습니다. 사이트와 저장소는 공개 상태이며, 누구나 현재 조사 자료를 열람할 수 있습니다.
 
 ## GitHub 공유
 
-로컬 Git 저장소와 CI를 준비했습니다. GitHub 원격 저장소는 아직 생성하거나 연결하지 않았습니다. 원격 연결 후 다른 개발자는 원본 파일과 생성된 JSON, 잠금 파일을 포함한 저장소를 받아 `npm ci`로 같은 환경을 실행할 수 있습니다. 내부 리서치 공유에는 비공개 저장소를 사용합니다.
+`main`에 변경 사항을 올리면 GitHub Actions가 타입·빌드·브라우저 테스트를 확인한 뒤 GitHub Pages에 자동 배포합니다. Pull request에서는 검증만 실행합니다. 원본 XLSX, 생성된 JSON, 잠금 파일, 디자인 문서가 함께 포함되어 다른 개발자가 같은 프로젝트를 재현할 수 있습니다.
+
+GitHub Pages에서는 정적 내보내기를 사용하며 저장소 이름에 맞는 경로를 빌드에 포함합니다. 로컬 개발 서버는 기존처럼 `/`에서 실행합니다. 공개 사이트도 `PLAYFIELD_TEST_URL`을 지정해 같은 브라우저 테스트를 실행할 수 있습니다.
 
 프로젝트의 사용자 규칙은 [docs/PROJECT_RULES.md](docs/PROJECT_RULES.md)에 보존합니다.
 
