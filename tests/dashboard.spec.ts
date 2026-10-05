@@ -2,6 +2,49 @@ import {test,expect} from '@playwright/test';
 import fs from 'node:fs';
 import data from '../data/market.json' with {type:'json'};
 
+test('rank graphs use the selected ordinal scale and distinguish missing observations', async ({page}) => {
+  await page.goto('/');
+  await page.getByRole('textbox',{name:'게임 검색'}).fill('Meowdoku');
+  const rankCells=page.locator('.rank-value');
+  await expect(rankCells).toHaveText(['1','2']);
+  await expect(rankCells.nth(1).getByRole('img')).toHaveAttribute('aria-label','Top 100 중 2위, 막대가 길수록 상위');
+  expect(await rankCells.nth(1).locator('.chart-bar').evaluate(el=>(el as HTMLElement).style.width)).toBe('99%');
+  await page.getByRole('button',{name:'Top 10',exact:true}).click();
+  expect(await rankCells.nth(1).locator('.chart-bar').evaluate(el=>(el as HTMLElement).style.width)).toBe('90%');
+  await page.getByRole('button',{name:'Meowdoku! 비교 선택',exact:true}).click();
+  await page.getByRole('textbox',{name:'게임 검색'}).fill('Block Out!');
+  await page.getByRole('button',{name:'Block Out! - Color Sort Puzzle 비교 선택',exact:true}).click();
+  await page.locator('.compare-tray').getByRole('button',{name:'게임 비교',exact:true}).click();
+  const androidRow=page.locator('.comparison-table tbody tr').filter({hasText:'Google Play 순위'});
+  // Block Out! has no Google Play observation in Top 10; missing is not zero.
+  await expect(androidRow.locator('td').nth(1)).toHaveText('선택 범위에서 미수집');
+  await expect(androidRow.locator('td').nth(1).locator('.chart-bar')).toHaveCount(0);
+  expect(await androidRow.locator('td').first().locator('.chart-bar').evaluate(el=>(el as HTMLElement).style.width)).toBe('90%');
+});
+
+test('all sections retain their layout and render the local design fonts', async ({page}) => {
+  const errors:string[]=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  page.on('console',message=>{if(message.type()==='error') errors.push(message.text());});
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
+  await page.evaluate(()=>document.fonts.ready);
+  expect(await page.evaluate(()=>document.fonts.check('500 14px "Inter Variable"','PLAYFIELD') && document.fonts.check('500 14px "IBM Plex Sans"','145') && document.fonts.check('400 14px "Noto Sans KR"','시장'))).toBe(true);
+  expect(await page.locator('body').evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgb(11, 14, 17)');
+  const mainSections=await page.locator('main>section').evaluateAll(els=>els.map(el=>el.className));
+  expect(mainSections).toEqual(['stats','editorial','genre-section','ranking-section','methodology']);
+  for(const width of [1440,390]) {
+    await page.setViewportSize({width,height:1000});
+    for(const section of ['시장 개요','게임 순위','스토어 비교','게임플레이','수익 모델','마케팅','아트 디렉션','지역 비교','개발 기회','자료·출처']) {
+      await page.getByRole('button',{name:section,exact:true}).first().click();
+      await expect(page.getByRole('heading',{level:1})).toBeVisible();
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+      await page.screenshot({path:`test-results/section-${section}-${width}.png`,fullPage:true});
+    }
+  }
+  expect(errors).toEqual([]);
+});
+
 test('data preserves all rank slots, dates, missing values and traceable origins', () => {
   for (const store of ['ios','android']) {
     const rows = data.observations.filter(o => o.country === '미국' && o.chart === 'free' && o.store === store);

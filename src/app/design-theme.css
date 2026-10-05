@@ -1,0 +1,114 @@
+/* DESIGN.md skin. Geometry, responsive grids and interaction timings live in globals.css. */
+:root {
+  color-scheme: dark;
+  --paper: #0b0e11;
+  --white: #ffffff;
+  --ink: #eaecef;
+  --muted: #929aa5;
+  --secondary: #cdd1d6;
+  --line: #2b3139;
+  --accent: #fcd535;
+  --accent-active: #f0b90b;
+  --on-accent: #181a20;
+  --surface: #1e2329;
+  --surface-raised: #2b3139;
+  --dark: #1e2329;
+  /* Store series are categorical, not price-direction green/red. */
+  --green: #929aa5;
+  --font-body: 'Inter Variable', 'Noto Sans KR', sans-serif;
+  --font-number: 'IBM Plex Sans', 'Noto Sans KR', sans-serif;
+}
+body { font-family: var(--font-body); }
+::selection { background: var(--accent); color: var(--on-accent); }
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible {
+  outline-color: #3b82f6;
+}
+.brand { color: var(--accent); }
+.brand-caption { color: var(--muted); letter-spacing: 1.2px; }
+h1 { font-weight: 700; }
+h2, .section-title h2, .editorial h2, .region-item h3, .opportunity-row h3,
+.detail-dialog h2 { font-weight: 600; }
+.eyebrow { color: var(--muted); }
+.nav-item { font-size: 13px; }
+.report-meta, .internal-label, .section-index, .chart-head, .chart-caption,
+.scope-note, .stat-foot, .table-bottom, .ranking-scope-note, .source-link,
+.evidence-label, .source-summary p { font-size: 11px; }
+.filter-group label>span { font-size: 10px; }
+.top-switch .active, .compare-check.checked {
+  background: var(--accent); color: var(--on-accent);
+}
+.small-count { color: var(--ink); }
+.export-button { background: var(--surface); border-color: var(--line); }
+.stats { padding-top: 32px; padding-bottom: 32px; }
+.stats strong { font-family: var(--font-number); font-weight: 600; letter-spacing: -.3px; }
+.stats strong.genre-stat { font-family: var(--font-body); font-weight: 600; }
+.editorial { padding-top: 24px; padding-bottom: 32px; }
+.editorial-number strong { font-family: var(--font-number); font-weight: 600; letter-spacing: -2px; color: var(--accent); }
+.editorial-number>span { font-size: 10px; }
+.editorial-heading, .editorial p { color: var(--muted); }
+.editorial h2 { color: var(--ink); }
+.chart-legend, .chart-legend small { font-size: 11px; }
+.bar-value, .chart-percent, .chart-percent small, .rank-value,
+.rank-chart-value, .text-number, .small-count, .title-count, .research-number,
+.year-value, .top-switch button, .region-item p strong {
+  font-family: var(--font-number); font-variant-numeric: tabular-nums;
+}
+.game-name strong { font-size: 13px; font-weight: 500; }
+.game-name small, .subgenre, .research-status { font-size: 11px; }
+.game-initial { font-family: var(--font-body); }
+.game-table thead th { font-size: 11px; }
+.game-table tbody tr:hover { background: var(--surface); }
+.research-status { background: var(--surface); color: var(--secondary); }
+.research-status.pending { border: 1px solid var(--line); color: var(--ink); }
+.research-content p, .detail-fields dd { color: var(--secondary); font-size: 14px; }
+.text-number, .editorial .text-number { color: var(--accent); font-weight: 600; }
+.text-keyword, .editorial .text-keyword { color: var(--white); font-weight: 600; }
+.text-caution, .editorial .text-caution { color: var(--secondary); text-decoration: underline dotted; text-underline-offset: 4px; }
+.source-back { color: var(--secondary); }
+.method-note, .hook-hypothesis { border-left-color: var(--muted); }
+.method-note { padding: 24px; }
+.method-note strong { color: var(--ink); font-weight: 600; }
+.method-note p, .hook-hypothesis p { color: var(--secondary); }
+.raw-table th, .comparison-table th { background: var(--surface); }
+.raw-table { color: var(--secondary); }
+.comparison-table td { font-size: 13px; color: var(--secondary); }
+.comparison-table th { font-size: 12px; }
+.compare-tray, .toast { box-shadow: none; border: 1px solid var(--line); }
+.toast { background: var(--surface); color: var(--ink); }
+.compare-tray { color: var(--ink); background: var(--surface); }
+.compare-tray strong { color: var(--accent); font-family: var(--font-number); }
+.compare-tray>button:not(.tray-clear) { background: var(--accent); color: var(--on-accent); padding: 8px 12px; font-weight: 600; }
+.compare-tray .tray-clear { color: var(--muted); }
+.detail-dialog { background: var(--paper); }
+.detail-ranks>div { border-left-color: var(--line); }
+.detail-ranks .rank-chart-value { font-size: 28px; font-weight: 600; color: var(--accent); }
+.rank-chart { display: flex; flex-direction: column; gap: 8px; }
+.rank-chart-value { font-size: 24px; font-weight: 600; line-height: 1.4; color: var(--ink); }
+.rank-chart-track { display: block; height: 8px; background: var(--surface-raised); }
+.rank-chart-track .chart-bar { height: 100%; min-height: 0; }
+.rank-chart-compact { gap: 6px; max-width: 72px; margin: auto; }
+.rank-chart-compact .rank-chart-value { font-size: 17px; font-weight: 500; }
+.rank-chart-compact .rank-chart-track { height: 3px; }
+.rank-missing { color: var(--muted); font-size: inherit; }
+footer { background: #fafafa; color: #707a8a; }
+footer .footer-brand { color: #181a20; }
+footer a { color: #181a20; }
+@media(max-width:900px) {
+  .nav-item { font-size: 12px; }
+  .editorial-number strong { letter-spacing: -1px; }
+}
+@media(max-width:600px) {
+  .nav-item { font-size: 11px; }
+  .report-meta { font-size: 9px; }
+  .section-index, .editorial-heading .section-index { font-size: 9px; }
+  .chart-head, .chart-legend, .chart-legend small, .stat-foot { font-size: 10px; }
+  .scope-note, .chart-caption, .ranking-scope-note { font-size: 10px; }
+  .editorial { padding: 24px 16px; }
+  .editorial-number>span { font-size: 8px; }
+  .editorial p { font-size: 11px; }
+  .research-content p, .detail-fields dd { font-size: 13px; }
+  .method-note { padding: 16px; }
+  .compare-tray { gap: 12px; }
+  .compare-tray>button:not(.tray-clear) { padding: 8px; }
+  .detail-ranks .rank-chart-value { font-size: 24px; }
+}
