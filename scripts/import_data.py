@@ -17,7 +17,7 @@ def clean(value):
     if isinstance(value, datetime):
         return value.isoformat()
     value = unicodedata.normalize("NFC", str(value))
-    return re.sub(r"[\U0001F000-\U0001FFFF\u2600-\u27BF\uFE0F]", "", value).strip()
+    return value.strip()
 
 def key(name):
     name = unicodedata.normalize("NFKD", name).casefold()
@@ -30,21 +30,28 @@ def main():
     aliases = json.loads((ROOT / "data/aliases.json").read_text())
     config = json.loads((ROOT / "data/import-config.json").read_text())
     hooks = json.loads((ROOT / "data/marketing-hypotheses.json").read_text())
+    publisher_aliases = json.loads((ROOT / "data/publisher-aliases.json").read_text())
     alias_lookup = {key(name): key(group[0]) for group in aliases for name in group}
     def identity(name):
         return alias_lookup.get(key(name), key(name))
 
     workbooks = {}
     documents = []
+    formula_books = {}
     for path in sorted(args.input_dir.glob("*.xlsx")):
         filename = unicodedata.normalize("NFC", path.name)
         workbook = openpyxl.load_workbook(path, data_only=True)
+        formula_books[filename] = openpyxl.load_workbook(path, data_only=False)
         sheets = {}
         for sheet in workbook.worksheets:
             rows = [[clean(v) for v in row] for row in sheet.values]
             sheets[sheet.title] = rows
+            formulas = {cell.coordinate: cell.value for cells in formula_books[filename][sheet.title] for cell in cells if cell.data_type == 'f'}
+            blanks = {cell.coordinate: 'intentionalBlank' if '""' in cell.value else 'uncachedFormula'
+                      for cells in formula_books[filename][sheet.title] for cell in cells
+                      if cell.data_type == 'f' and sheet[cell.coordinate].value is None}
             documents.append({"id": key(filename + sheet.title), "file": filename,
-                              "sheet": sheet.title, "rows": rows})
+                              "sheet": sheet.title, "rows": rows, "formulas": formulas, "blankStates": blanks})
         workbooks[filename] = sheets
     if not workbooks:
         raise ValueError("No XLSX workbooks found")
@@ -99,7 +106,7 @@ def main():
                 game.update({"gameplay": values[offset], "monetization": values[6] if expanded else values[4],
                              "marketing": values[7] if expanded else values[5], "artStyle": values[8] if expanded else values[6],
                              "evidence": values[9] if expanded else values[7],
-                             "analysis": {"file": "게임전략_MVP_마케팅.xlsx", "sheet": sheet, "row": row}})
+                             "analysis": {"file": "게임전략_MVP_마케팅.xlsx", "sheet": sheet, "row": row, "kind": "analystReading", "originalText": values[offset]}})
     for values in market["3-3 매출-다운로드 비교"][5:]:
         if values[0] and isinstance(values[3], (int, float)):
             game = games.get(identity(values[0]))
@@ -110,9 +117,42 @@ def main():
         game = games.get(identity(name))
         if game:
             game["marketingHook"] = hook
-    dataset = {"schemaVersion": 1, "importedAt": datetime.now(timezone.utc).isoformat(),
+    # Optional repeated observations are additive. Never rewrite the original XLSX.
+    for snapshot_path in config.get('snapshotFiles', []):
+        for record in json.loads((ROOT / snapshot_path).read_text()):
+            required = ['name', 'publisher', 'genre', 'country', 'store', 'date', 'rank', 'chart', 'source']
+            if any(k not in record for k in required) or record['store'] not in ['ios', 'android'] or record['chart'] not in ['free', 'grossing']:
+                raise ValueError(f'Invalid ranking snapshot: {snapshot_path}')
+            if type(record['rank']) is not int or not 1 <= record['rank'] <= 100 or not all(k in record['source'] for k in ['file','sheet','row']):
+                raise ValueError('Snapshot requires rank 1..100 and file/sheet/row provenance')
+            if not re.fullmatch(r'\d{4}-\d{2}-\d{2}', record['date']):
+                raise ValueError('Snapshot date must use YYYY-MM-DD')
+            datetime.strptime(record['date'], '%Y-%m-%d')
+            provenance=record['source']
+            provenance['file']=unicodedata.normalize('NFC',provenance['file'])
+            document=next((d for d in documents if d['file']==provenance['file'] and d['sheet']==provenance['sheet']),None)
+            if not document or type(provenance['row']) is not int or not 1<=provenance['row']<=len(document['rows']):
+                raise ValueError('Snapshot provenance must point to an imported workbook sheet and row')
+            add(record['name'], record['publisher'], record['genre'], record.get('subgenre'), record['country'], record['store'], record['date'], record['rank'], record['chart'], record['source']['sheet'], record['source']['row'], record.get('notes'), record['source'].get('url'))
+            observations[-1]['source'] = record['source']
+    if len({o['id'] for o in observations}) != len(observations):
+        raise ValueError('Duplicate country/store/chart/date/rank observation')
+
+    from import_research import normalize_research
+    research = normalize_research(market, strategy, identity)
+    for game in games.values():
+        game['tags'] = []
+        for field, patterns in {
+            'monetization': [('보상형 광고', r'보상형|리워드 광고'), ('IAP', r'IAP|인앱|결제|과금'), ('광고 중심', r'광고 중심|광고 수익형'), ('패스', r'패스')],
+            'gameplay': [('정렬', r'정렬'), ('매치3', r'매치.?3'), ('머지', r'머지|합치'), ('블록', r'블록'), ('PvP', r'PvP|대전'), ('수집', r'수집')]
+        }.items():
+            for label, pattern in patterns:
+                if game[field] and re.search(pattern, game[field], re.I):
+                    kind = 'estimate' if '추정' in game[field] else 'analystReading'
+                    game['tags'].append({'label': label, 'field': field, 'originalText': game[field], 'source': {**game['analysis'], 'kind': kind, 'originalText': game[field]}, 'kind': kind})
+    dataset = {"schemaVersion": 2, "importedAt": datetime.now(timezone.utc).isoformat(),
                "games": list(games.values()), "observations": observations, "documents": documents,
-               "files": [{"name": name, "sheets": len(sheets)} for name, sheets in workbooks.items()]}
+               "files": [{"name": name, "sheets": len(sheets)} for name, sheets in workbooks.items()], "publisherAliases": publisher_aliases, **research}
     (ROOT / "data/market.json").write_text(json.dumps(dataset, ensure_ascii=False, indent=2))
     print(f"Imported {len(games)} games, {len(observations)} observations, {len(documents)} sheets")
 

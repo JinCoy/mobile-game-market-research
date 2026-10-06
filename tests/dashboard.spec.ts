@@ -4,22 +4,22 @@ import data from '../data/market.json' with {type:'json'};
 
 test('rank graphs use the selected ordinal scale and distinguish missing observations', async ({page}) => {
   await page.goto('./');
+  await expect(page.locator('.report-meta')).toContainText('v2.0.0');
   await page.getByRole('textbox',{name:'게임 검색'}).fill('Meowdoku');
   const rankCells=page.locator('.rank-value');
   await expect(rankCells).toHaveText(['1','2']);
-  await expect(rankCells.nth(1).getByRole('img')).toHaveAttribute('aria-label','Top 100 중 2위, 막대가 길수록 상위');
-  expect(await rankCells.nth(1).locator('.chart-bar').evaluate(el=>(el as HTMLElement).style.width)).toBe('99%');
+  await expect(rankCells.nth(1).getByRole('img')).toHaveAttribute('aria-label','1위부터 100위 공통 순위 축에서 2위');
   await page.getByRole('button',{name:'Top 10',exact:true}).click();
-  expect(await rankCells.nth(1).locator('.chart-bar').evaluate(el=>(el as HTMLElement).style.width)).toBe('90%');
+  await expect(rankCells.nth(1).getByRole('img')).toHaveAttribute('aria-label','1위부터 10위 공통 순위 축에서 2위');
   await page.getByRole('button',{name:'Meowdoku! 비교 선택',exact:true}).click();
   await page.getByRole('textbox',{name:'게임 검색'}).fill('Block Out!');
   await page.getByRole('button',{name:'Block Out! - Color Sort Puzzle 비교 선택',exact:true}).click();
   await page.locator('.compare-tray').getByRole('button',{name:'게임 비교',exact:true}).click();
   const androidRow=page.locator('.comparison-table tbody tr').filter({hasText:'Google Play 순위'});
   // Block Out! has no Google Play observation in Top 10; missing is not zero.
-  await expect(androidRow.locator('td').nth(1)).toHaveText('선택 범위에서 미수집');
+  await expect(androidRow.locator('td').nth(1)).toHaveText('수집 Top 10에서 미관측');
   await expect(androidRow.locator('td').nth(1).locator('.chart-bar')).toHaveCount(0);
-  expect(await androidRow.locator('td').first().locator('.chart-bar').evaluate(el=>(el as HTMLElement).style.width)).toBe('90%');
+  await expect(androidRow.locator('td').first().getByRole('img')).toHaveAttribute('aria-label','1위부터 10위 공통 순위 축에서 2위');
 });
 
 test('all sections retain their layout and render the local design fonts', async ({page}) => {
@@ -201,19 +201,20 @@ for (const width of [1920,1440,834,390]) {
   test(`responsive layout and console at ${width}px`, async ({page}) => {
     const errors:string[]=[];
     page.on('pageerror',error=>errors.push(error.message));
-    page.on('console',message=>{if(message.type()==='error') errors.push(message.text());});
+    page.on('console',message=>{if(message.type()==='error') errors.push(`${message.text()} ${message.location().url}`);});
     await page.setViewportSize({width,height:1000});
     await page.goto('./');
     await page.waitForLoadState('networkidle');
     await expect(page.locator('h1')).toBeVisible();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({path:`test-results/overview-${width}.png`,fullPage:true});
+    await page.screenshot({path:`test-results/overview-viewport-${width}.png`});
     await page.getByRole('button',{name:'게임 순위',exact:true}).click();
     await page.getByRole('combobox',{name:'스토어',exact:true}).selectOption('ios');
     await page.getByRole('combobox',{name:'장르',exact:true}).selectOption('퍼즐');
     await expect(page.locator('.game-table tbody tr')).toHaveCount(48);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-    if(width===390) expect(await page.locator('.table-scroll').first().evaluate(el=>el.scrollWidth>el.clientWidth)).toBe(true);
+    if(width===390) expect(await page.getByRole('region',{name:'게임 순위 표'}).evaluate(el=>el.scrollWidth>el.clientWidth)).toBe(true);
     expect(errors).toEqual([]);
   });
 }

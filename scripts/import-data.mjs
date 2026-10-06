@@ -9,5 +9,6 @@ if (!python) {
   console.error('Python with openpyxl is required. Install requirements.txt in a virtual environment, or set PLAYFIELD_PYTHON.');
   process.exit(1);
 }
-const result = spawnSync(python, ['scripts/import_data.py', ...process.argv.slice(2)], {stdio:'inherit'});
+const verify = process.argv.includes('--verify');
+const result = spawnSync(python, [verify ? 'scripts/verify_data.py' : 'scripts/import_data.py', ...process.argv.slice(2).filter(a=>a!=='--verify')], {stdio:'inherit'});
 process.exit(result.status ?? 1);

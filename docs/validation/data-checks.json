@@ -1,0 +1,18 @@
+{
+  "sheets": 47,
+  "observations": 420,
+  "knownGames": 243,
+  "missingSlots": 1,
+  "channels": 7,
+  "aiSamplesPerTable": 75,
+  "creatives": 30,
+  "uniqueVideos": 26,
+  "mvpAssessments": 172,
+  "benchmarks": 186,
+  "osRecords": 19,
+  "planTotals": {
+    "budget": 10000,
+    "installs": 15524.92341966025,
+    "d7": 563.9167362851576
+  }
+}

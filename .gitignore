@@ -1,5 +1,8 @@
 node_modules/
 .next/
+.next-verify/
+.next-pages/
+.next-release/
 out/
 .env*
 !.env.example

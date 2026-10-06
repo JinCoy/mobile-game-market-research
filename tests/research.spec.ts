@@ -1,0 +1,194 @@
+import {test,expect} from '@playwright/test';
+import {readFile} from 'node:fs/promises';
+import data from '../data/market.json' with {type:'json'};
+import {channelScore,planResult,latestRecords} from '../src/lib/analysis';
+import type {Observation,PlanPhase} from '../src/lib/schema';
+
+test('normalized evidence reconciles samples, default calculations and missing formulas',()=>{
+  expect(data.documents).toHaveLength(47);
+  expect(data.advertisingChannels.map(c=>c.score)).toEqual([94,66,70,59,51,81,72]);
+  for(const c of data.advertisingChannels) expect(channelScore(c.scores,data.channelWeights.map(w=>w*100))).toBeCloseTo(c.score,10);
+  expect(channelScore([5,5,5,5,5],[20,25,25,20,9])).toBeNull();
+  expect(channelScore([5,5,5,5,5],[NaN,25,25,20,10])).toBeNull();
+  for(const table of ['hook','format']) for(const game of data.adBrandStats) expect(data.adHookSamples.filter(s=>s.table===table&&s.gameId===game.gameId).reduce((a,s)=>a+s.count,0)).toBe(25);
+  expect(data.adCreatives).toHaveLength(30);
+  expect(new Set(data.adCreatives.map(c=>`${c.gameId}/${c.videoGroup}`)).size).toBe(26);
+  expect(data.adCreatives.every(c=>typeof c.adId==='string'&&c.source.range.endsWith(`H${c.source.row}`)&&c.readingSource.range.endsWith(`F${c.readingSource.row}`))).toBe(true);
+  const phases=data.marketingPlan.phases as PlanPhase[];
+  const results=phases.map(p=>planResult(p,String(p.budget),String(p.cpi??'')));
+  expect(results.reduce((a,r)=>a+(r?.installs||0),0)).toBeCloseTo(15524.9234196603,8);
+  expect(results.reduce((a,r)=>a+(r?.d7||0),0)).toBeCloseTo(563.916736285157,8);
+  for(const cpi of ['0','','-1','Infinity']) expect(planResult(phases[1],'1000',cpi)).toBeNull();
+  expect(planResult(phases[1],'', '0.14')).toBeNull();
+  expect(planResult(phases[1],'0','0.14')).toEqual({installs:0,d7:0});
+  expect(planResult(phases[0],'0','')).toEqual({installs:null,d7:null});
+  expect(planResult(phases[1],'1','0.03')?.installs).toBeCloseTo(33.3333333333,8);
+  expect(data.osDistribution.every(r=>r.source.file==='시장조사.xlsx'&&Math.abs(r.android+r.ios+r.other-1)<1e-12)).toBe(true);
+  expect(data.regionalBenchmarks.every(r=>r.source.file==='시장조사.xlsx')).toBe(true);
+  const blanks=data.documents.find(d=>d.sheet==='2-4 2인 개발 MVP 판단')!.blankStates;
+  expect(blanks.H39).toBe('intentionalBlank');expect(blanks.H51).toBe('intentionalBlank');
+  expect(data.mvpAssessments.filter(a=>a.score===null).every(a=>a.scoreState!=='available')).toBe(true);
+});
+
+test('repeat observations keep each country/store/chart date independently',()=>{
+  const old=data.observations.find(o=>o.country==='미국'&&o.store==='android'&&o.chart==='free')!;
+  const newer={...old,id:'new-snapshot',date:'2026-10-06'} as Observation;
+  const records=latestRecords([...(data.observations as Observation[]),newer]);
+  expect(records.filter(o=>o.country==='미국'&&o.store==='android'&&o.chart==='free')).toEqual([newer]);
+  expect(records.filter(o=>o.country==='미국'&&o.store==='ios')).toHaveLength(100);
+  expect(records.filter(o=>o.country==='인도네시아')).toHaveLength(20);
+});
+
+test('same-condition aggregation, filter scope, genre units and publishers are explicit',async({page})=>{
+  await page.goto('./');
+  await page.getByRole('button',{name:'전체 수집 기록',exact:true}).click();
+  await expect(page.locator('.stats>div').last()).toContainText('320');
+  await page.getByRole('button',{name:'모든 조사국 동일 조건',exact:true}).click();
+  await expect(page.locator('.stats>div').last()).toContainText('140');
+  await expect(page.getByRole('combobox',{name:'시장',exact:true})).toBeDisabled();
+  await page.getByRole('textbox',{name:'게임 검색'}).fill('Meowdoku');
+  await expect(page.locator('.stats>div').last()).toContainText('140');
+  await expect(page.locator('.filter-scope')).toContainText('검색 “Meowdoku”');
+  await page.getByRole('button',{name:'검색·장르·관심 필터 초기화',exact:true}).click();
+  await expect(page.getByRole('textbox',{name:'게임 검색'})).toHaveValue('');
+  await page.getByRole('button',{name:'장르 구성비',exact:true}).click();
+  await expect(page.locator('.genre-axis')).toContainText('100%');
+  await expect(page.locator('.chart-caption')).toContainText('Google Play 140건');
+  await page.locator('.publisher-panel>summary').click();
+  await page.getByRole('combobox',{name:'퍼블리셔 집계'}).selectOption('records');
+  await expect(page.locator('.publisher-panel')).toContainText('중복 제외');
+  await expect(page.locator('.publisher-panel')).toContainText('기록');
+  await page.getByRole('button',{name:'게임플레이',exact:true}).click();
+  await expect(page.locator('.analysis-coverage')).toContainText('분석 미작성');
+  await expect(page.locator('.tag-summary')).toContainText('미분류');
+});
+
+test('channel weights, sample definitions, duplicates and budget invalid states work',async({page})=>{
+  await page.goto('./');await page.getByRole('button',{name:'마케팅',exact:true}).click();
+  await expect(page.locator('.channel-panel .number-bars')).toContainText('94점');
+  await page.getByRole('spinbutton',{name:'광고 도달 크기 가중치'}).fill('19');
+  await expect(page.locator('.channel-panel .input-error')).toContainText('99%');
+  await expect(page.locator('.channel-panel .number-bars')).toHaveCount(0);
+  await page.getByRole('button',{name:'가중치 원자료 기본값 복원',exact:true}).click();
+  await expect(page.locator('.channel-panel .number-bars')).toContainText('94점');
+  await page.getByRole('combobox',{name:'광고 표본 정의'}).selectOption('reading');
+  await page.getByRole('checkbox',{name:'동일 영상 중복 제거'}).check();
+  await expect(page.locator('.sample-denominator')).toContainText('서로 다른 영상 26개');
+  await expect(page.locator('.sample-game h4')).toHaveText(['Royal Match 10개 기준','MONOPOLY GO! 7개 기준','Magic Sort! 9개 기준']);
+  await page.getByRole('combobox',{name:'광고 표본 정의'}).selectOption('hook');
+  await expect(page.locator('.sample-game h4')).toHaveText(['Royal Match 25개 기준','MONOPOLY GO! 25개 기준','Magic Sort! 25개 기준']);
+  await expect(page.locator('.plan-total')).toHaveText('예산 합계 $10,000 · 예상 설치 15,525명 · 예상 D7 564명');
+  await page.getByRole('spinbutton',{name:'1 소프트런치 예산'}).fill('2000');
+  await expect(page.locator('.plan-total')).toContainText('예산 합계 $11,000');
+  await expect(page.locator('.plan-total')).toContainText('22,668명');
+  await page.getByRole('spinbutton',{name:'1 소프트런치 CPI'}).fill('0');
+  await expect(page.locator('.plan-total')).toContainText('입력 오류');
+  await page.getByRole('spinbutton',{name:'1 소프트런치 CPI'}).fill('');
+  await expect(page.locator('.plan-total')).toContainText('입력 오류');
+  await page.getByRole('button',{name:'예산·CPI 원자료 기본값 복원',exact:true}).click();
+  await expect(page.locator('.plan-total')).toContainText('15,525명');
+  await page.getByRole('spinbutton',{name:'1 소프트런치 예산'}).fill('2000');
+  await page.locator('.plan-panel>.source-link').click();
+  await expect(page.locator('.source-highlight')).toHaveAttribute('data-source-row','4');
+  await page.getByRole('button',{name:'마케팅으로 돌아가기',exact:true}).click();
+  await expect(page.getByRole('spinbutton',{name:'1 소프트런치 예산'})).toHaveValue('2000');
+});
+
+test('region fixed filters, OS units, percentile benchmarks and MVP missing values work',async({page})=>{
+  await page.goto('./');await page.getByRole('button',{name:'지역 비교',exact:true}).click();
+  await expect(page.getByRole('combobox',{name:'시장',exact:true})).toBeDisabled();
+  await expect(page.getByRole('combobox',{name:'시장',exact:true})).toHaveValue('all');
+  await expect(page.getByRole('combobox',{name:'스토어',exact:true})).toHaveValue('android');
+  await expect(page.getByRole('combobox',{name:'순위 유형',exact:true})).toHaveValue('free');
+  await expect(page.getByRole('button',{name:'Top 20',exact:true})).toHaveClass('active');
+  const downloadPromise=page.waitForEvent('download');
+  await page.getByRole('button',{name:'순위 CSV 내보내기',exact:true}).click();
+  const download=await downloadPromise;
+  expect(download.suggestedFilename()).toBe('playfield-전체-android-free-top20.csv');
+  expect((await readFile((await download.path())!,'utf8')).split('\r\n')).toHaveLength(141);
+  await expect(page.locator('.region-labels')).toHaveCount(7);
+  await expect(page.locator('.regional-research')).toContainText('페이지뷰');
+  await expect(page.locator('.regional-research')).toContainText('태국·베트남·필리핀·말레이시아의 순위는 미수집');
+  await expect(page.locator('.benchmark-explorer')).toContainText('2024년 지역별 중앙값');
+  await page.getByRole('combobox',{name:'벤치마크 지표'}).selectOption('D28 리텐션');
+  await expect(page.locator('.benchmark-explorer .number-bars')).toContainText('0.82%');
+  await page.getByRole('button',{name:'개발 기회',exact:true}).click();
+  await page.getByRole('combobox',{name:'벤치마크 백분위'}).selectOption('P90');
+  await expect(page.locator('.benchmark-explorer .number-bars')).toContainText('12.58%');
+  await page.getByRole('combobox',{name:'벤치마크 범위'}).selectOption('genre');
+  await expect(page.locator('.benchmark-explorer')).toContainText('2024년 월별 중앙값의 산술평균');
+  await expect(page.getByRole('combobox',{name:'벤치마크 백분위'})).toBeDisabled();
+  await page.getByRole('combobox',{name:'MVP 추천 후보'}).selectOption(data.mvpRecommended[1].gameId);
+  await expect(page.locator('.candidate-detail')).toContainText('별도 마케팅 예산·CPI·소재 실행안은 미작성');
+  await page.locator('.mvp-research>details').first().locator('summary').first().click();
+  await page.getByRole('combobox',{name:'MVP 판정 필터'}).selectOption('-');
+  await expect(page.locator('.mvp-research>details').first()).toContainText('후보 아님 · 의도적 빈 수식 결과');
+  await page.locator('.candidate-detail>.source-link').first().click();
+  await page.getByRole('button',{name:'개발 기회로 돌아가기',exact:true}).click();
+  await expect(page.getByRole('combobox',{name:'MVP 추천 후보'})).toHaveValue(data.mvpRecommended[1].gameId);
+  await expect(page.getByRole('combobox',{name:'MVP 판정 필터'})).toHaveValue('-');
+  await expect(page.locator('.mvp-research>details').first()).toHaveAttribute('open','');
+  await expect(page.getByRole('combobox',{name:'벤치마크 범위'})).toHaveValue('genre');
+});
+
+test('source row, comparison state, sticky headers and individual removal survive navigation',async({page})=>{
+  await page.goto('./');
+  for(let i=0;i<6;i++) await page.locator('.compare-check:not([disabled])').nth(i).click();
+  await page.locator('.compare-tray').getByRole('button',{name:'게임 비교',exact:true}).click();
+  await expect(page.locator('.comparison-table thead th').nth(1)).toHaveCSS('position','sticky');
+  await expect(page.locator('.comparison-table tbody th').first()).toHaveCSS('position','sticky');
+  await page.locator('.compare-description').first().locator('summary').click();
+  const source=page.locator('.compare-description').first().locator('.source-link');
+  await source.click();await expect(page.locator('.source-highlight')).toContainText('Meowdoku');
+  await page.getByRole('button',{name:'시장 개요로 돌아가기',exact:true}).click();
+  await expect(page.locator('.comparison-table thead th')).toHaveCount(7);
+  await expect(page.locator('.compare-description').first()).toHaveAttribute('open','');
+  await page.getByRole('button',{name:'Meowdoku! 비교에서 해제',exact:true}).click();
+  await expect(page.locator('.comparison-table thead th')).toHaveCount(6);
+  await page.keyboard.press('Escape');
+  await page.getByRole('textbox',{name:'게임 검색'}).fill('Block Blast!');
+  await page.locator('.game-name').click();
+  await expect(page.locator('.game-countries')).toContainText('7/7개국');
+});
+
+test('local chart controls and expanded evidence restore without hydration errors',async({page})=>{
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('./');
+  await page.getByRole('button',{name:'장르 구성비',exact:true}).click();
+  await page.locator('.publisher-panel>summary').click();
+  await page.getByRole('combobox',{name:'퍼블리셔 집계'}).selectOption('records');
+  await page.locator('.coverage-summary>summary').click();
+  await page.locator('.coverage-summary .source-link').first().click();
+  await page.getByRole('button',{name:'시장 개요로 돌아가기',exact:true}).click();
+  await expect(page.getByRole('button',{name:'장르 구성비',exact:true})).toHaveClass('active');
+  await expect(page.locator('.publisher-panel')).toHaveAttribute('open','');
+  await expect(page.getByRole('combobox',{name:'퍼블리셔 집계'})).toHaveValue('records');
+  await page.reload();
+  await expect(page.getByRole('button',{name:'장르 구성비',exact:true})).toHaveClass('active');
+  await page.getByRole('button',{name:'지역 비교',exact:true}).click();
+  await page.getByRole('combobox',{name:'OS 표시 범위'}).selectOption('continent');
+  await page.locator('.os-chart details').first().locator('summary').click();
+  await page.locator('.os-chart details').first().locator('.source-link').first().click();
+  await page.getByRole('button',{name:'지역 비교로 돌아가기',exact:true}).click();
+  await expect(page.getByRole('combobox',{name:'OS 표시 범위'})).toHaveValue('continent');
+  await expect(page.locator('.os-chart details').first()).toHaveAttribute('open','');
+  expect(errors).toEqual([]);
+});
+
+for(const width of [1920,1440,834,390]) test(`new charts, inputs and source tables at ${width}px`,async({page})=>{
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400&&r.url().includes('127.0.0.1'))errors.push(`${r.status()} ${r.url()}`);});
+  await page.setViewportSize({width,height:1000});await page.goto('./');
+  for(const section of ['마케팅','지역 비교','개발 기회']) {
+    await page.getByRole('button',{name:section,exact:true}).click();
+    await page.locator(section==='마케팅'?'.channel-panel':section==='지역 비교'?'.regional-research':'.mvp-research').scrollIntoViewIfNeeded();
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+    await page.screenshot({path:`test-results/new-${section}-${width}.png`});
+    if(section==='마케팅'&&width===1440) await page.locator('.channel-panel').screenshot({path:'test-results/marketing-channels-1440.png'});
+    if(section==='지역 비교'&&(width===1440||width===390)) await page.locator('.region-grid').screenshot({path:`test-results/region-charts-${width}.png`});
+  }
+  await page.getByRole('button',{name:'자료·출처',exact:true}).click();
+  await page.getByRole('combobox',{name:'원자료 시트'}).selectOption(data.documents.find(d=>d.sheet==='2-4 2인 개발 MVP 판단')!.id);
+  await expect(page.locator('.raw-table')).toContainText('의도적 빈 수식 결과');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  expect(errors).toEqual([]);
+});

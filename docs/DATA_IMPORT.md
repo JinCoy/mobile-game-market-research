@@ -1,0 +1,53 @@
+# 데이터 수입과 반복 관측
+
+원본 XLSX를 읽고 `data/market.json`을 생성한다. 한글 파일명은 NFC로 식별하며, 원본을 저장하거나 워크북 생성 코드를 실행하지 않는다.
+
+```sh
+npm run data:import
+npm run data:verify
+npm run typecheck
+npm run build
+npm test
+```
+
+Python과 `openpyxl`이 필요하다. 수입 명령은 프로젝트 `.venv`, 시스템 Python, Codex 번들 Python을 확인한다. 다른 환경에서는 `requirements.txt`를 사용하거나 `PLAYFIELD_PYTHON`을 지정한다.
+
+## 원자료 변경
+
+광고·지역·MVP 파싱은 `scripts/import_research.py`, 순위·게임·원자료 수입은 `scripts/import_data.py`에 있다. 시트의 행·열 구성이 바뀌면 파싱 범위와 독립 대조 스크립트 `scripts/verify_data.py`를 함께 수정한다. 현재 표본 수를 명시적으로 검증하는 Playwright 데이터 테스트도 새로운 원자료에 맞춰 갱신한다.
+
+`documents`는 모든 시트의 저장된 값과 수식을 보존한다. 참조 시트는 화면에서 원본에 연결하지만, OS·벤치마크·순위 집계는 원본에서 한 번만 수행한다. 날짜는 순위 관측일, OS 관측 월, 벤치마크 발행 연도·데이터 기간, JSON 가져온 시각을 각각 유지한다.
+
+일반 Excel 계산 엔진은 없다. 캐시가 비어 있고 빈 문자열 반환 조건을 가진 수식은 ‘의도적 빈 수식 결과’, 그 외 캐시 누락 수식은 ‘수식 캐시 미저장’으로 표시한다. 평가 입력 부족과 후보 아님은 별도 상태로 보존한다. 웹의 가중치·예산·CPI 계산은 해당 계산식만 지원한다.
+
+## 반복 순위 관측
+
+기존 국가별 순위 시트는 국가·날짜·순위가 있는 모든 행을 읽는다. 같은 국가의 다음 조사일을 추가할 때 이전 날짜의 행을 남겨야 한다. 동일 국가·스토어·차트·날짜·순위의 중복은 오류다.
+
+기존 정규화 범위 밖의 순위 표는 JSON 목록으로 추가할 수 있다. `data/import-config.json`의 `snapshotFiles`에 프로젝트 상대 경로를 등록한다. 각 레코드는 다음 필드를 가진다.
+
+| 필드 | 조건 |
+| --- | --- |
+| `name`, `publisher`, `genre`, `country` | 원자료 표기 |
+| `store` | `ios` 또는 `android` |
+| `chart` | `free` 또는 `grossing` |
+| `date` | 실제 관측일 `YYYY-MM-DD` |
+| `rank` | 1~100 정수 |
+| `source` | `file`, `sheet`, `row` 필수; `url` 선택 |
+| `subgenre`, `notes` | 선택 |
+
+추가 JSON의 근거는 가져온 워크북의 실제 시트·행을 가리켜야 한다. 이전 관측의 근거 행도 남겨둔다. 이미 기본 수입 범위에 들어 있는 행을 JSON에 다시 넣으면 중복 오류가 발생한다. JSON을 수입한 뒤 `data:verify`는 추가 레코드를 JSON 입력과 별도로 대조하고 근거 행의 존재를 확인한다. 새로운 레코드와 해당 XLSX 행의 의미가 일치하는지도 원자료 변경 시 확인해야 한다.
+
+‘최신’은 국가·스토어·차트별 최신 날짜다. 다른 국가의 더 늦은 조사일 때문에 기존 국가가 사라지지 않는다. 개별 날짜를 선택하면 그 날짜에 관측된 기록만 표시한다. 기존·추가 관측은 하나의 기록으로 덮어쓰지 않는다.
+
+현재 자료에는 동일 조건의 반복 조사 결과가 없다. 성장 그래프를 만들려면 같은 국가·스토어·차트·수집 Top 범위에서 여러 날짜의 실제 관측이 필요하다. 2025/2026 벤치마크 보고서 또는 서로 다른 국가의 조사일을 게임 성장 시계열로 연결하지 않는다.
+
+## 정적 경로 검증
+
+GitHub Pages 빌드는 아래 환경 변수를 사용한다. 기본 출력은 `out/`이다.
+
+```sh
+PLAYFIELD_STATIC_EXPORT=true PLAYFIELD_BASE_PATH=/mobile-game-market-research npm run build
+```
+
+실행 중인 별도 서버의 `.next`를 건드리지 않으려면 `PLAYFIELD_DIST_DIR=.next-verify`를 사용한다. 일반 빌드는 해당 디렉터리에 서버 출력을 만들고, 정적 빌드는 해당 디렉터리를 정적 출력으로 사용한다. 두 형식의 빌드를 같은 디렉터리에서 동시에 실행하지 않는다. Playwright는 `PLAYFIELD_TEST_URL`로 별도 포트 또는 하위 경로를 지정할 수 있다.

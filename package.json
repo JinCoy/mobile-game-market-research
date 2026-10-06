@@ -1,6 +1,6 @@
 {
   "name": "playfield-market-research",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Mobile game market intelligence from research workbooks",
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1",
@@ -8,7 +8,8 @@
     "start": "next start --hostname 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
-    "data:import": "node scripts/import-data.mjs"
+    "data:import": "node scripts/import-data.mjs",
+    "data:verify": "node scripts/import-data.mjs --verify"
   },
   "keywords": [],
   "author": "",

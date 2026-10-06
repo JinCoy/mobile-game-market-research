@@ -2209,12 +2209,415 @@ for col, w in zip("ABCDEFGHIJKLMNOPQ", [8, 44, 18, 24, 11, 16, 12, 30, 16, 11, 1
 ws.row_dimensions[BT2].height = 48
 ws.freeze_panes = "A4"
 
+# ---------- (5) '매출 Top100' H18 메모 고치기 (사용자 승인, 2026-10-05) ----------
+ws = wb["매출 Top100"]
+_old = "(1-4 세부 장르 시트에는 없음 — 1-4는 1-1·1-2만 집계)"
+_new = "(6단계-3에서 '1-4 세부 장르' 맨 아래 별도 표에 추가함 — 1-4 위쪽 표는 1-1·1-2만 집계)"
+assert isinstance(ws["H18"].value, str) and ws["H18"].value.count(_old) == 1
+ws["H18"].value = ws["H18"].value.replace(_old, _new)
+
+# ---------- (6) 광고 채널 분석 ----------
+ws = wb.create_sheet("광고 채널 분석")
+ws["A1"] = "광고 채널 분석 — 유튜브·인스타그램·페이스북·틱톡·인플루언서 (+ 분석자가 추가한 2개 채널)"; ws["A1"].font = TITLE
+ws["A2"] = ("읽는 법: ① 공개 자료로 확인한 사실(도달·성과 순위)과 ② 2인 팀 기준 점수(분석자 판단)를 나눠 둠. "
+            "파란 글씨 = 바꿀 수 있는 가중치, 노란 칸 = 2차 인용·분석자 판단·확인 불가")
+ws["A2"].font = NOTE
+DR_P = "DataReportal, Digital 2026 Mid-Year Global Update Report (18세 이상 광고 도달, 인도 제외) https://datareportal.com/reports/digital-2026-mid-year-global-update-report"
+DR_S = "SQ Magazine, Social Media Advertising Statistics 2026 (DataReportal 2026-04 Global Statshot 인용) https://sqmagazine.co.uk/social-media-advertising-statistics/"
+AF25 = "AppsFlyer, 2025 Performance Index 보도자료 (2025-12-03, 88개 매체·설치 162억 건) https://www.appsflyer.com/company/newsroom/pr/performance-index-2025/"
+PG25 = "PocketGamer.biz, AppsFlyer Performance Index 2025 장르별 요약 (2025-12-04) https://www.pocketgamer.biz/apple-and-google-continue-to-lead-in-mobile-game-ads-but-applovin-wins-over-select-genres/"
+AF24 = "AppsFlyer, 17th Performance Index 보도자료 (2024-10-14, 2024년 상반기 데이터) https://www.appsflyer.com/company/newsroom/pr/performance-index-17-released/"
+IMH = "Influencer Marketing Hub, Influencer Marketing Benchmark Report 2026 (전 업종 브랜드 설문) https://influencermarketinghub.com/influencer-marketing-benchmark-report/"
+IMH25 = "archive.com 블로그 (Influencer Marketing Hub Benchmark Report 2025 인용) https://archive.com/blog/social-media-platform-specific-influencer"
+HUB = "Hubfluence, 2026 Influencer Marketing Benchmark Report (여러 출처 집계, 2026-06 기준) https://www.hubfluence.io/resources/influencer-marketing-report-2026"
+LFT2 = "Liftoff·Singular, 2025 Casual Gaming Apps Report — 'Where Casual Games Find Their Players' (Liftoff 데이터 2024-02~2025-02) https://liftoff.ai/2025-casual-gaming-apps-report/"
+
+T1 = 5
+ws.cell(T1 - 1, 1, "① 채널별 공개 자료 (사실) — 게임 광고 비용(CPI)은 채널별 공개 원문이 없어 '확인 불가'. 지역·OS별 CPI는 3-1 시트 참고").font = TITLE
+head_row(ws, T1, ["채널", "광고를 사는 곳", "광고 도달 (사람 수)", "도달 자료 등급", "게임 광고 성과 근거 (공개 순위)", "장르 근거 (공개 자료)",
+                  "게임 광고 비용 지표", "출처"])
+chan = [
+ ("유튜브", "Google Ads 앱 캠페인 (유튜브·검색·Play 등에 함께 노출)", "약 26.5억 명", "2차 인용",
+  "AppsFlyer 2025: Android 게임 매체 1위는 Google Ads (유튜브는 Google Ads 안에 묶여 따로 순위 없음)",
+  "Google Ads는 Android에서 카지노·테이블탑·퍼즐·레이싱·액션 장르에서 특히 강함 (PocketGamer 요약)",
+  "확인 불가 (채널별 게임 CPI 원문 없음)", DR_S + " / " + AF25 + " / " + PG25),
+ ("인스타그램", "Meta Ads (페이스북과 같은 광고 도구로 함께 집행)", "14.4억 명 (인도 제외, 원문) / 약 19.9억 명 (전체, 2차)", "원문 + 2차",
+  "AppsFlyer는 Meta Ads로 묶어 순위를 매김 → 인스타그램 단독 순위는 확인 불가",
+  "Meta Ads: 2024년 상반기 Android 게임에서 카지노·미드코어·스포츠&레이싱 상위 (2024 데이터)",
+  "확인 불가", DR_P + " / " + DR_S + " / " + AF24),
+ ("페이스북", "Meta Ads (인스타그램과 같은 광고 도구)", "약 23.9억 명", "2차 인용",
+  "인스타그램과 같음 (Meta Ads 한 묶음). 2025년에는 '격차를 좁힌 매체'로 언급",
+  "인스타그램과 같음", "확인 불가", DR_S + " / " + AF25 + " / " + AF24),
+ ("틱톡", "TikTok for Business (TikTok Ads Manager)", "22.1억 명 (18세 이상, 인도 제외)", "원문",
+  "AppsFlyer 2025: Google·Apple과의 격차를 좁힌 매체로 언급. 게임 부문 구체 순위는 보도자료에 없음 → 확인 불가",
+  "확인 불가 (게임 장르별 공개 원문을 찾지 못함)", "확인 불가", DR_P + " / " + AF25),
+ ("인플루언서", "크리에이터에게 직접 의뢰 (유튜브·틱톡·인스타 채널)", "크리에이터마다 다름 (확인 불가)", "—",
+  "게임 설치 성과에 대한 공개 순위 없음 (확인 불가). 참고: 2026년 브랜드 투자 계획 1순위 플랫폼은 틱톡(선택 31%, 전 업종)",
+  "전 업종 기준: 인스타 57.1% · 틱톡 51.6% · 유튜브 36.7% · 페이스북 28.4%가 인플루언서 마케팅에 사용 (2025, 2차 인용)",
+  "참고(2차 집계, 전 업종 크리에이터 콘텐츠): 1,000회 노출당 틱톡 $4.63 · 인스타 릴스 $8.50 · 유튜브 $15", IMH + " / " + IMH25 + " / " + HUB),
+ ("[분석자 추가] Apple Ads", "App Store 검색 광고 (iOS 전용)", "확인 불가 (App Store 사용자 수 공개 기준 다름)", "—",
+  "AppsFlyer 2025: iOS 게임 매체 1위 (단, 북미·서유럽에서는 AppLovin이 앞섬)",
+  "iOS 게임 장르 중 하이퍼캐주얼·테이블탑을 뺀 모든 장르에서 1위 (PocketGamer 요약)", "확인 불가", AF25 + " / " + PG25),
+ ("[분석자 추가] 광고 네트워크 (AppLovin·Mintegral·Unity·Liftoff 등, 다른 앱 안 광고)", "각 네트워크 광고 도구", "확인 불가", "—",
+  "AppsFlyer 2025: AppLovin이 iOS 게임에서 북미·서유럽 선두, Android에서 AppLovin·Mintegral 상승",
+  "캐주얼 게임 설치의 약 절반은 하이퍼캐주얼·퍼즐 게임 안 광고에서 옴 (Liftoff, 게임 퍼블리셔 기준)", "확인 불가", AF25 + " / " + LFT2),
+]
+C1, CL = T1 + 1, T1 + len(chan)
+for k, row in enumerate(chan):
+    i = C1 + k
+    put(ws, i, list(row), wrap=True)
+    ws.cell(i, 1).font = BB
+    if row[3] in ("2차 인용", "원문 + 2차"): ws.cell(i, 3).fill = YEL; ws.cell(i, 4).fill = YEL
+    for c in (3, 5, 6, 7):
+        if "확인 불가" in str(ws.cell(i, c).value) or "2차" in str(ws.cell(i, c).value): ws.cell(i, c).fill = YEL
+    ws.cell(i, 8).alignment = Alignment(vertical="top", wrap_text=False)
+
+# 점수표
+T2 = CL + 3
+ws.cell(T2 - 1, 1, "② 2인 팀 채널 점수 — 점수(1~5, 5 = 좋음)는 위 ① 사실을 바탕으로 한 분석자 판단(노란 칸). 가중치는 파란 글씨로 바꿀 수 있음").font = TITLE
+head_row(ws, T2, ["채널", "광고 도달 크기", "게임 광고 성과 근거", "우리 후보 장르(퍼즐·캐주얼) 적합", "2인 팀 운영 쉬움",
+                  "작은 예산으로 시작", "점수 (100점, 수식)", "순위 (수식)", "점수 이유 (분석자)"])
+W2 = T2 + 1
+put(ws, W2, ["가중치 (합계 100%) →", 0.20, 0.25, 0.25, 0.20, 0.10, f"=SUM(B{W2}:F{W2})", "", "← 가중치는 분석자 제안"])
+for c in range(2, 7): blue_in(ws.cell(W2, c), "0%")
+ws.cell(W2, 7).number_format = "0%"; ws.cell(W2, 1).font = BB
+sc = [
+ ("유튜브 (Google Ads)", 5, 5, 5, 4, 4, "도달 최대(2차), Android 게임 1위 매체, 퍼즐 장르 강세 언급. 앱 캠페인은 소재만 넣으면 자동 최적화라 운영이 비교적 쉬움(분석자 판단)"),
+ ("인스타그램 (Meta Ads)", 4, 3, 3, 3, 4, "도달 큼. 게임 성과 근거는 카지노·미드코어 쪽(2024). 소재를 자주 바꿔야 해서 운영 중간(분석자 판단)"),
+ ("페이스북 (Meta Ads)", 5, 3, 3, 3, 4, "인스타그램과 같은 광고 도구. 도달은 더 큼(2차)"),
+ ("틱톡", 5, 2, 3, 2, 3, "도달 큼(원문). 게임 장르별 성과 원문은 확인 불가. 세로 영상 소재를 계속 새로 만들어야 해 2인 팀 부담이 큼(분석자 판단)"),
+ ("인플루언서", 3, 2, 3, 2, 3, "게임 설치 성과 공개 자료 없음. 섭외·계약·확인에 사람 손이 많이 듦(분석자 판단)"),
+ ("[분석자 추가] Apple Ads", 3, 5, 4, 4, 4, "iOS 게임 1위 매체. 검색 키워드 광고라 영상 소재 부담이 적음. iOS에만 해당"),
+ ("[분석자 추가] 광고 네트워크", 4, 4, 4, 3, 2, "퍼즐·캐주얼 설치가 많이 나오는 곳(Liftoff). 플레이어블 광고 소재가 필요하고, 최소 예산 조건은 확인 불가"),
+]
+S1, SL = T2 + 2, T2 + 1 + len(sc)
+for k, row in enumerate(sc):
+    i = S1 + k
+    put(ws, i, [row[0]] + list(row[1:6]) + [None, None, row[6]], wrap=True)
+    ws.cell(i, 1).font = BB
+    for c in range(2, 7):
+        ws.cell(i, c).fill = YEL; ws.cell(i, c).alignment = Alignment(horizontal="center", vertical="top")
+    ws.cell(i, 9).fill = YEL
+    w = W2
+    ws.cell(i, 7).value = (f"=ROUND((B{i}*$B${w}+C{i}*$C${w}+D{i}*$D${w}+E{i}*$E${w}+F{i}*$F${w})/SUM($B${w}:$F${w})/5*100,0)")
+    ws.cell(i, 8).value = f"=RANK(G{i},$G${S1}:$G${SL},0)"
+    for c in (7, 8): ws.cell(i, c).alignment = Alignment(horizontal="center", vertical="top")
+
+notes32 = [
+ "인스타그램·페이스북은 같은 Meta Ads로 사고, AppsFlyer도 'Meta Ads' 하나로 순위를 매겨 두 채널을 따로 비교한 공개 성과 자료는 확인 불가.",
+ "유튜브는 Google Ads 앱 캠페인 안에 함께 묶여 집행·순위가 나옴 → 유튜브만의 게임 성과 순위는 확인 불가.",
+ "도달 숫자는 각 플랫폼 광고 도구가 알려 주는 '광고가 닿을 수 있는 사람 수'라 실제 사용자 수와 다를 수 있음(DataReportal도 같은 주의를 붙임). 출처 기준이 달라 직접 비교는 대략적으로만.",
+ "인플루언서 수치는 게임이 아닌 전 업종 브랜드 설문·집계. 게임 설치 성과·비용은 비공개 → 대신 쓸 수 있는 공개 지표: 크리에이터 영상 조회수·참여율(vidIQ 등 도구로 확인 가능).",
+ "채널별 실제 게임 광고비·CPI·설치 수: 비공개. 3-1 시트의 지역·OS·장르별 CPI를 대신 쓰고, 실제 값은 소액 테스트로 확인.",
+ "Apple Ads·광고 네트워크 2줄은 요청 목록 밖이지만, 게임 광고 매체 순위 상위라 비교를 위해 분석자가 추가함.",
+ "3-3 후킹 영상 분석과 3-4 마케팅 실행안은 이 점수표를 근거로 씀(다음 단계).",
+]
+for k, t in enumerate(notes32):
+    ws.cell(SL + 2 + k, 1, t).font = NOTE
+for col, w in zip("ABCDEFGHI", [30, 30, 26, 16, 42, 40, 30, 12, 60]):
+    ws.column_dimensions[col].width = w
+ws.freeze_panes = "B4"
+
+# ---------- (7) 후킹 영상 분석 (AdWhispr 메타 광고 라이브러리 데이터, 2026-10-05 조회) ----------
+ws = wb.create_sheet("후킹 영상 분석")
+ws["A1"] = "후킹 영상 분석 — 광고 첫 마디(후킹) 유형별 빈도: Royal Match · MONOPOLY GO! · Magic Sort!"; ws["A1"].font = TITLE
+ws["A2"] = ("읽는 법: 후킹 유형·형식은 AdWhispr가 AI로 분류한 값('AdWhispr 분류'). 숫자는 2026-10-05에 조회한 그대로이며, 비율·합계는 수식. "
+            "처음 3초 화면은 메타 광고 라이브러리에서 영상을 직접 재생해 본 '분석자 판독'(⑤, 노란 칸)")
+ws["A2"].font = NOTE
+ADW = "AdWhispr (Meta 광고 라이브러리 수집·AI 분류), 브랜드 통계·광고 목록 조회 2026-10-05"
+GAMES3 = ["Royal Match", "MONOPOLY GO!", "Magic Sort!"]
+# ① 게임별 요약
+R0 = 5
+ws.cell(R0 - 1, 1, "① 게임별 광고 현황 (AdWhispr 브랜드 통계)").font = TITLE
+head_row(ws, R0, ["게임", "3-3 유형 (수식)", "지금 집행 중인 광고 수", "AdWhispr가 추적하는 광고 수", "AI 분류가 끝난 표본 수",
+                  "가장 오래 집행한 광고 (일)", "AdWhispr 추정 광고비 범위 ($)", "비고"])
+stat = [("Royal Match", 1988, 116, 25, 49, "66,599 ~ 123,703"),
+        ("MONOPOLY GO!", 1451, 120, 25, 203, "292,532 ~ 543,274"),
+        ("Magic Sort!", 119, 119, 25, 68, "66,143 ~ 122,820")]
+MDR = "'매출-다운로드 비교'!"
+for k, (g, act, trk, smp, lng, spend) in enumerate(stat):
+    i = R0 + 1 + k
+    put(ws, i, [g, f'=IFERROR(INDEX({MDR}$H${H0+1}:$H${H0+len(rows33)},MATCH(A{i},{MDR}$A${H0+1}:$A${H0+len(rows33)},0)),"확인 불가")',
+                act, trk, smp, lng, spend, "추정 광고비의 기간·계산 방법은 확인 불가 (AdWhispr 추정)"], wrap=True)
+    ws.cell(i, 1).font = BB
+    for c in (2, 3, 4, 5, 6): ws.cell(i, c).alignment = Alignment(horizontal="center", vertical="top")
+    ws.cell(i, 3).number_format = "#,##0"
+    ws.cell(i, 7).fill = YEL; ws.cell(i, 8).fill = YEL
+# ② 후킹 유형 빈도
+HD = R0 + 6
+ws.cell(HD - 1, 1, "② 후킹 유형별 빈도 — AdWhispr 분류 표본(게임당 25개) 기준").font = TITLE
+head_row(ws, HD, ["후킹 유형 (AdWhispr 라벨)", "쉬운 뜻 (분석자 번역)"] + GAMES3 + ["합계 (수식)", "비율 (수식)"])
+hooks = [("direct_offer", "직접 제안형 — '무료·광고 없음·지금 해 봐'처럼 혜택을 바로 말함", 24, 21, 8),
+         ("curiosity_gap", "호기심형 — '1%만 풀 수 있다'처럼 궁금하게 만듦", 0, 4, 14),
+         ("problem_agitation", "문제 자극형 — 답답함·불편함을 먼저 보여 줌", 1, 0, 2),
+         ("story", "이야기형 — 짧은 이야기로 시작", 0, 0, 1)]
+H1, HL = HD + 1, HD + len(hooks)
+for k, (lab, mean, a, b_, c_) in enumerate(hooks):
+    i = H1 + k
+    put(ws, i, [lab, mean, a, b_, c_, f"=SUM(C{i}:E{i})", f"=F{i}/$F${HL+1}"], wrap=True)
+    ws.cell(i, 2).fill = YEL
+    ws.cell(i, 7).number_format = "0%"
+put(ws, HL + 1, ["합계", "", f"=SUM(C{H1}:C{HL})", f"=SUM(D{H1}:D{HL})", f"=SUM(E{H1}:E{HL})", f"=SUM(F{H1}:F{HL})", f"=SUM(G{H1}:G{HL})"])
+ws.cell(HL + 1, 7).number_format = "0%"
+for c in range(1, 8): ws.cell(HL + 1, c).font = BB
+# ③ 형식 빈도
+FD = HL + 4
+ws.cell(FD - 1, 1, "③ 광고 형식별 빈도 — AdWhispr 분류 표본(게임당 25개) 기준").font = TITLE
+head_row(ws, FD, ["형식 (AdWhispr 라벨)", "쉬운 뜻 (분석자 번역)"] + GAMES3 + ["합계 (수식)", "비율 (수식)"])
+fmts = [("animation", "애니메이션 (게임 장면을 만든 영상)", 20, 19, 5),
+        ("ugc_talking_head", "일반인이 화면에 나와 말함", 0, 0, 13),
+        ("ugc_lifestyle", "일반인이 일상에서 게임하는 모습", 1, 0, 4),
+        ("text_overlay", "큰 글자가 중심", 0, 6, 2),
+        ("screenshot", "게임 화면 캡처", 3, 0, 1),
+        ("studio_product", "제품 촬영형", 1, 0, 0)]
+F1, FL = FD + 1, FD + len(fmts)
+for k, (lab, mean, a, b_, c_) in enumerate(fmts):
+    i = F1 + k
+    put(ws, i, [lab, mean, a, b_, c_, f"=SUM(C{i}:E{i})", f"=F{i}/$F${FL+1}"], wrap=True)
+    ws.cell(i, 2).fill = YEL
+    ws.cell(i, 7).number_format = "0%"
+put(ws, FL + 1, ["합계", "", f"=SUM(C{F1}:C{FL})", f"=SUM(D{F1}:D{FL})", f"=SUM(E{F1}:E{FL})", f"=SUM(F{F1}:F{FL})", f"=SUM(G{F1}:G{FL})"])
+ws.cell(FL + 1, 7).number_format = "0%"
+for c in range(1, 8): ws.cell(FL + 1, c).font = BB
+# ④ 개별 광고 30개
+AD = FL + 4
+ws.cell(AD - 1, 1, "④ 게임별 영상 광고 10개씩 (AdWhispr 광고 목록, 오래 집행한 순, 집행 중) — 문구는 광고 원문 그대로").font = TITLE
+head_row(ws, AD, ["게임", "Meta 광고 라이브러리 ID", "집행 일수", "후킹 유형 (AdWhispr)", "형식 (AdWhispr)", "톤 (AdWhispr)",
+                  "오퍼 (AdWhispr)", "광고 문구 (첫 줄)"])
+ads30 = [
+ ("Royal Match", "1726316855083037", 50, "direct_offer", "animation", "excitement", "no_explicit_offer", "NO ADS. NO WIFI. PURE FUN."),
+ ("Royal Match", "1089702293564432", 50, "direct_offer", "animation", "excitement", "no_explicit_offer", "NO ADS. NO WIFI. PURE FUN."),
+ ("Royal Match", "1411165037532310", 50, "direct_offer", "studio_product", "curiosity", "no_explicit_offer", "No ADS"),
+ ("Royal Match", "4630787260485910", 50, "problem_agitation", "screenshot", "excitement", "no_explicit_offer", "NO ADS. NO WIFI. PURE FUN."),
+ ("Royal Match", "28734790306122605", 50, "direct_offer", "animation", "excitement", "no_explicit_offer", "No ADS and FREE"),
+ ("Royal Match", "1360608269119654", 50, "direct_offer", "animation", "excitement", "no_explicit_offer", "NO ADS. NO WIFI. PURE FUN."),
+ ("Royal Match", "1098005362662932", 50, "direct_offer", "animation", "excitement", "no_explicit_offer", "No ADS and FREE"),
+ ("Royal Match", "1309645668892427", 50, "direct_offer", "ugc_lifestyle", "curiosity", "no_explicit_offer", "No ADS"),
+ ("Royal Match", "2192760164630774", 50, "direct_offer", "animation", "excitement", "no_explicit_offer", "NO ADS. NO WIFI. PURE FUN."),
+ ("Royal Match", "1392560629687289", 50, "direct_offer", "animation", "excitement", "no_explicit_offer", "NO ADS. NO WIFI. PURE FUN."),
+ ("MONOPOLY GO!", "1674823853701845", 204, "curiosity_gap", "animation", "excitement", "no_explicit_offer", "Libera gli animaletti!"),
+ ("MONOPOLY GO!", "796330853023057", 204, "direct_offer", "animation", "excitement", "free_trial", "Gioca gratis a Monopoly GO!"),
+ ("MONOPOLY GO!", "1309942491068984", 177, "direct_offer", "animation", "excitement", "free_trial", "Gioca gratis a Monopoly GO!"),
+ ("MONOPOLY GO!", "2424531614685734", 131, "direct_offer", "animation", "excitement", "no_explicit_offer", "Don't miss The Simpsons GO!"),
+ ("MONOPOLY GO!", "1559166695787060", 131, "direct_offer", "animation", "excitement", "new_launch", "¡No te pierdas The Simpson GO!"),
+ ("MONOPOLY GO!", "1316376480460608", 128, "direct_offer", "animation", "excitement", "new_launch", "¡No te pierdas The Simpson GO!"),
+ ("MONOPOLY GO!", "1012642531160291", 128, "direct_offer", "animation", "excitement", "no_explicit_offer", "The Simpson GO! está en curso"),
+ ("MONOPOLY GO!", "1357761026259464", 127, "direct_offer", "animation", "excitement", "new_launch", "The Simpsons GO! is live!"),
+ ("MONOPOLY GO!", "1501392118334017", 127, "curiosity_gap", "animation", "excitement", "no_explicit_offer", "The Simpson GO! está en curso"),
+ ("MONOPOLY GO!", "983924064252944", 126, "direct_offer", "animation", "excitement", "new_launch", "Non perderti The Simpsons GO!"),
+ ("Magic Sort!", "3985548428413528", 69, "curiosity_gap", "animation", "curiosity", "no_explicit_offer", "Magical journey of sorting!"),
+ ("Magic Sort!", "1573783297425746", 69, "curiosity_gap", "animation", "curiosity", "no_explicit_offer", "Magical journey of sorting!"),
+ ("Magic Sort!", "1896160021343579", 69, "direct_offer", "ugc_lifestyle", "excitement", "no_explicit_offer", "(문구 없음)"),
+ ("Magic Sort!", "1065385889771960", 69, "curiosity_gap", "animation", "curiosity", "no_explicit_offer", "Magic Sort"),
+ ("Magic Sort!", "900245332631697", 69, "problem_agitation", "ugc_talking_head", "excitement", "no_explicit_offer", "(문구 없음)"),
+ ("Magic Sort!", "1060580849761773", 69, "direct_offer", "ugc_lifestyle", "curiosity", "no_explicit_offer", "(문구 없음)"),
+ ("Magic Sort!", "2477486662759105", 69, "curiosity_gap", "ugc_talking_head", "curiosity", "no_explicit_offer", "(문구 없음)"),
+ ("Magic Sort!", "1032627419485915", 69, "curiosity_gap", "ugc_lifestyle", "curiosity", "no_explicit_offer", "(문구 없음)"),
+ ("Magic Sort!", "1556811082584487", 55, "curiosity_gap", "text_overlay", "curiosity", "no_explicit_offer", "Only 1% can solve this puzzle."),
+ ("Magic Sort!", "1834079867955631", 55, "curiosity_gap", "text_overlay", "curiosity", "no_explicit_offer", "Only 1% can solve this puzzle."),
+]
+A1x, ALx = AD + 1, AD + len(ads30)
+for k, row in enumerate(ads30):
+    i = A1x + k
+    put(ws, i, list(row))
+    ws.cell(i, 2).number_format = "@"
+    ws.cell(i, 3).alignment = Alignment(horizontal="center")
+# ④-2 30개 기준 후킹 빈도 (수식)
+head_row(ws, AD, ["후킹 유형", "30개 중 개수 (수식)", "비율 (수식)"], c0=10)
+for k, (lab, *_r) in enumerate(hooks):
+    i = AD + 1 + k
+    put(ws, i, [lab, f'=COUNTIF($D${A1x}:$D${ALx},J{i})', f"=K{i}/COUNTA($D${A1x}:$D${ALx})"], c0=10)
+    ws.cell(i, 12).number_format = "0%"
+# ⑤ 처음 3초 화면 유형 — 분석자 판독 (메타 광고 라이브러리, 2026-10-05)
+P5 = ALx + 3
+ws.cell(P5 - 1, 1, "⑤ 처음 3초 화면 유형 — 분석자 판독 (메타 광고 라이브러리에서 영상을 재생해 0초·약 2초 화면을 캡처해 봄, 2026-10-05). 노란 칸 = 분석자 판독").font = TITLE
+head_row(ws, P5, ["게임", "Meta 광고 라이브러리 ID", "처음 3초 화면 유형 (분석자 판독)", "요청 유형으로 묶기", "장면 설명 (분석자 판독)", "같은 영상 묶음"])
+T_CRISIS, T_CHOICE, T_HAND, T_PLAY, T_REAL, T_3D, T_IP, T_ACTOR = (
+    "위기 장면 (캐릭터가 위험)", "선택지 (어느 핀을 뽑을까)", "실사 손 연출 (녹이기·씻기)", "게임 플레이 화면",
+    "실사 도전 장면 (사람·팻말)", "3D 연출 장면", "IP·캐릭터 등장", "실사 배우 연기")
+GROUP = {T_CRISIS: "실패·위기 장면", T_CHOICE: "선택지"}
+look = [
+ ("Royal Match", "1726316855083037", T_CRISIS, "왕이 둥근 방에 갇혀 있고 핀 옆으로 물이 흘러듦", ""),
+ ("Royal Match", "1089702293564432", T_CRISIS, "왕이 물살에 휩쓸려 미끄러진 뒤 물이 찬 칸에 갇힘, 아래는 매치3 판", ""),
+ ("Royal Match", "1411165037532310", T_HAND, "실제 사람 손이 토치로 얼음을 녹임", ""),
+ ("Royal Match", "4630787260485910", T_CRISIS, "왕이 자갈 아래 칸에 갇힘, 실제 사람 손이 도구를 듦, 아래는 매치3 판", ""),
+ ("Royal Match", "28734790306122605", T_CRISIS, "지그재그 통로 위에서 자갈이 쏟아질 듯한 칸에 왕이 있음, 매치3 블록", ""),
+ ("Royal Match", "1360608269119654", T_CHOICE, "핀 여러 개 중 하나를 실제 손가락이 당김, 왕 위에 블록", ""),
+ ("Royal Match", "1098005362662932", T_CRISIS, "물이 찬 구불구불한 수로에 상어 같은 물체와 왕, 아래는 매치3 판", ""),
+ ("Royal Match", "1309645668892427", T_HAND, "진흙 속 왕을 실제 손이 호스로 씻어 냄", ""),
+ ("Royal Match", "2192760164630774", T_CRISIS, "왕 아래 자갈 더미, 옆에 매치3 판, 실제 손 등장", ""),
+ ("Royal Match", "1392560629687289", T_3D, "블록이 움직이다 무너지며 자갈이 쏟아짐 (판독 애매)", ""),
+ ("MONOPOLY GO!", "1674823853701845", T_ACTOR, "동물 조각상 클로즈업 → 철창 앞 실제 배우가 놀라는 장면", ""),
+ ("MONOPOLY GO!", "796330853023057", T_IP, "모노폴리 판 위 3D 도시 → 미스터 모노폴리 캐릭터 클로즈업", "MG-A"),
+ ("MONOPOLY GO!", "1309942491068984", T_IP, "796330853023057과 같은 장면", "MG-A"),
+ ("MONOPOLY GO!", "2424531614685734", T_IP, "심슨 집 거실을 위에서 비추고 바트·개가 뛰어다님", "MG-B"),
+ ("MONOPOLY GO!", "1559166695787060", T_IP, "2424531614685734와 같은 장면", "MG-B"),
+ ("MONOPOLY GO!", "1316376480460608", T_IP, "2424531614685734와 같은 장면", "MG-B"),
+ ("MONOPOLY GO!", "1012642531160291", T_IP, "미스터 모노폴리와 호머 심슨이 함께 등장", ""),
+ ("MONOPOLY GO!", "1357761026259464", T_IP, "만화식 싸움 구름 + 협업 로고", ""),
+ ("MONOPOLY GO!", "1501392118334017", T_IP, "심슨 그림체의 배 두 척 장면", ""),
+ ("MONOPOLY GO!", "983924064252944", T_IP, "스프링필드 마을 전경 + 협업 로고", ""),
+ ("Magic Sort!", "3985548428413528", T_PLAY, "병이 가득한 정렬 화면에서 손가락 아이콘이 병을 옮김", ""),
+ ("Magic Sort!", "1573783297425746", T_PLAY, "병 정렬 플레이 (색 액체를 옮김)", ""),
+ ("Magic Sort!", "1896160021343579", T_PLAY, "병 정렬 플레이 (어두운 배경)", ""),
+ ("Magic Sort!", "1065385889771960", T_3D, "실사풍 병 3개 → 뒤쪽 병들이 깨지며 흩어짐", ""),
+ ("Magic Sort!", "900245332631697", T_PLAY, "거의 정리된 병 화면에서 하나씩 옮김", ""),
+ ("Magic Sort!", "1060580849761773", T_PLAY, "병 정렬 플레이 (나무 선반)", ""),
+ ("Magic Sort!", "2477486662759105", T_PLAY, "빈 병을 손가락 아이콘이 옮기는 안내형 화면", ""),
+ ("Magic Sort!", "1032627419485915", T_PLAY, "색 블록이 꽉 찬 정렬 화면", ""),
+ ("Magic Sort!", "1556811082584487", T_REAL, "길거리에서 'Only 1% can solve this puzzle' 팻말 앞 여성이 실물 퍼즐에 도전, 사람들이 구경", "MS-A"),
+ ("Magic Sort!", "1834079867955631", T_REAL, "1556811082584487과 같은 장면", "MS-A"),
+]
+assert len(look) == 30 and set(x[1] for x in look) == set(a[1] for a in ads30)
+L1, LL = P5 + 1, P5 + len(look)
+for k, (g, aid, typ, desc, grp) in enumerate(look):
+    i = L1 + k
+    put(ws, i, [g, aid, typ, GROUP.get(typ, "기타"), desc, grp], wrap=True)
+    ws.cell(i, 2).number_format = "@"
+    for c in (3, 4, 5): ws.cell(i, c).fill = YEL
+# 집계 (수식)
+types_ = [T_CRISIS, T_CHOICE, T_HAND, T_PLAY, T_REAL, T_3D, T_IP, T_ACTOR]
+head_row(ws, P5, ["처음 3초 화면 유형", "Royal Match", "MONOPOLY GO!", "Magic Sort!", "합계"], c0=8)
+for k, t in enumerate(types_):
+    i = P5 + 1 + k
+    put(ws, i, [t] + [f'=COUNTIFS($A${L1}:$A${LL},{col}${P5},$C${L1}:$C${LL},$H{i})' for col in ("I", "J", "K")]
+            + [f"=SUM(I{i}:K{i})"], c0=8)
+tr = P5 + len(types_) + 1
+put(ws, tr, ["합계", f"=SUM(I{P5+1}:I{tr-1})", f"=SUM(J{P5+1}:J{tr-1})", f"=SUM(K{P5+1}:K{tr-1})", f"=SUM(L{P5+1}:L{tr-1})"], c0=8)
+for c in range(8, 13): ws.cell(tr, c).font = BB
+g0 = tr + 2
+head_row(ws, g0, ["요청 유형", "Royal Match", "MONOPOLY GO!", "Magic Sort!", "합계"], c0=8)
+for k, t in enumerate(["실패·위기 장면", "선택지", "전후 비교", "기타"]):
+    i = g0 + 1 + k
+    put(ws, i, [t] + [f'=COUNTIFS($A${L1}:$A${LL},{col}${g0},$D${L1}:$D${LL},$H{i})' for col in ("I", "J", "K")]
+            + [f"=SUM(I{i}:K{i})"], c0=8)
+ws.cell(g0 + 6, 8, "같은 영상 묶음(F열)을 하나로 치면 서로 다른 영상은 26개 (분석자 판독)").font = NOTE
+# ⑥ 발견
+P6 = LL + 3
+ws.cell(P6 - 1, 1, "⑥ 발견 (광고 문구·라벨 기준 — 영상 화면을 본 판독 아님)").font = TITLE
+finds = [
+ "Royal Match: 영상 광고 10개 중 10개 문구가 '광고 없음(No ADS)'·'와이파이 없어도 됨'·'무료'를 앞세움 (위 ④ H열). 분류 표본 25개 중 24개가 직접 제안형.",
+ "MONOPOLY GO!: 영상 광고 10개 중 7개가 'The Simpsons GO!' 협업 이벤트 알림 (④ H열). 가장 오래 집행한 광고는 204일 — 같은 소재를 오래 씀.",
+ "Magic Sort!: 분류 표본 25개 중 호기심형 14개, 형식은 '일반인이 말하기'(UGC) 13개로 가장 많음. 대표 문구 'Only 1% can solve this puzzle.'",
+ "처음 3초 (⑤, 분석자 판독): Royal Match는 10개 중 6개가 '왕이 위험에 빠진 장면'(실패·위기), 2개는 실제 사람 손이 녹이기·씻기를 하는 장면. MONOPOLY GO!는 10개 중 9개가 IP·캐릭터 등장(심슨 협업 7개). Magic Sort!는 10개 중 7개가 게임 플레이 화면 그대로.",
+ "흥미로운 점(분석자 해석): AdWhispr 형식 라벨로는 Magic Sort!가 '일반인 말하기'가 많았지만, 실제 처음 3초는 대부분 게임 화면이었음 — 사람이 나오는 부분은 3초 뒤에 있거나 라벨이 영상 전체 기준일 수 있음.",
+ "'전후 비교'형 첫 장면은 30개 중 0개. Royal Match의 위기 장면은 실제 매치3 판과 함께 나오는 경우가 많음 (보여 준 장면이 실제 게임에 있는지는 확인 불가).",
+ "주의: 수집된 광고 일부는 유럽 대상(이탈리아어·스페인어 문구)이라 미국 광고만 따로 거르지 못함. AdWhispr 분류는 게임당 25개 표본이며, 나머지 광고 분류는 조회 시점에 진행 중이었음.",
+ "실제 광고 성과(조회수·설치 수·광고비): 비공개. AdWhispr '추정 광고비'는 계산 방법이 공개되지 않은 추정치.",
+ "출처: " + ADW,
+]
+for k, t in enumerate(finds):
+    c = ws.cell(P6 + k, 1, t); c.font = NOTE if k >= 4 else B
+for col, w in zip("ABCDEFGHIJKL", [26, 24, 26, 18, 48, 14, 20, 30, 14, 16, 14, 10]):
+    ws.column_dimensions[col].width = w
+ws.freeze_panes = "A4"
+
+# ---------- (8) 마케팅 실행안 ----------
+ws = wb.create_sheet("마케팅 실행안")
+ws["A1"] = "마케팅 실행안 — 우리 MVP(2인 개발)용. 이 시트의 판단은 모두 '분석자 제안'이며, 숫자는 근거 시트에서 수식으로 가져옴"; ws["A1"].font = TITLE
+ws["A2"] = "파란 글씨 = 바꿀 수 있는 가정값(예산·후보·지역). 노란 칸 = 분석자 제안. 근거 열에 시트·칸을 적어 둠"; ws["A2"].font = NOTE
+MV = "'2인 개발 MVP 판단'!"
+put(ws, 4, ["MVP 후보 (분석자 제안, 바꿀 수 있음)", "Magic Sort!",
+            f'=IFERROR("세부 장르: "&INDEX({MV}$C${C1_}:$C${CL_},MATCH(B4,{MV}$A${C1_}:$A${CL_},0))&" · 2인 점수: "&INDEX({MV}$H${C1_}:$H${CL_},MATCH(B4,{MV}$A${C1_}:$A${CL_},0))&" · 판정: "&INDEX({MV}$I${C1_}:$I${CL_},MATCH(B4,{MV}$A${C1_}:$A${CL_},0)),"2-4 목록에 없는 게임")',
+            "근거: 2-4 ②·③ (점수), 3-3 (이 게임만 광고 데이터가 있음)"])
+ws.cell(4, 1).font = BB; blue_in(ws.cell(4, 2))
+ws.cell(4, 3).fill = YEL
+# ① 단계 계획
+T4 = 7
+ws.cell(T4 - 1, 1, "① 단계별 실행 계획 — 지역·OS·채널·예산·예상 결과 (예상치는 3-1과 같은 계산: 예산 ÷ CPI × 리텐션)").font = TITLE
+head_row(ws, T4, ["단계", "언제 (분석자 제안)", "지역", "OS (수식: 4-7 OS 우선순위)", "채널 (분석자 제안)", "채널 순위 (수식: 3-2)",
+                  "예산 ($)", "CPI ID (3-1)", "CPI ($, 수식)", "예상 설치 수", "리텐션 지역", "D7 남는 사람 (P50)",
+                  "합격 기준 (2-2)", "근거"])
+OSR = "'대륙별 OS 분포'!"
+CH = "'광고 채널 분석'!"
+CP = "'광고 대비 유입'!"
+RB2 = "'지역 벤치마크'!"
+stages = [
+ ("0 준비", "출시 4주 전", "—", "", "스토어 페이지 + 광고 소재 준비 (② 중 D·A·B 먼저)", "", 0, "", "",
+  "광고 없음 — 소재·스토어 페이지만 준비", "3-3 ⑥"),
+ ("1 소프트런치", "출시 1~4주", "브라질", "브라질", "유튜브 (Google Ads)", "유튜브 (Google Ads)", 1000, "C04", "남미",
+  "D1·D7이 남미 중앙값 이상이면 2단계로", "CPI가 가장 싼 남미에서 리텐션부터 확인 — 3-1 S3, 2-6/4-7 브라질 Android 먼저"),
+ ("2 아시아 테스트", "출시 5~8주", "인도네시아", "인도네시아", "유튜브 (Google Ads)", "유튜브 (Google Ads)", 1000, "C05", "아시아",
+  "D1·D7이 아시아 중앙값 이상", "아시아태평양 CPI $0.27 (3-1 C05). 인도네시아는 2-7 동남아 분석 지역"),
+ ("3 미국 출시", "출시 9~16주", "미국", "미국", "유튜브 (Google Ads) + Apple Ads", "[분석자 추가] Apple Ads", 3000, "C03", "북미",
+  "D1 '30% 약간 상회'(전체 상위 25%)에 가까우면 확대", "미국은 iOS 먼저(또는 동시) — 4-7. Apple Ads는 iOS 게임 1위 매체 (3-2)"),
+ ("4 확대", "출시 17주~", "미국", "미국", "Meta(인스타·페이스북) + 광고 네트워크 추가", "[분석자 추가] 광고 네트워크", 5000, "C03", "북미",
+  "D30 광고비 회수율이 오르면 계속 (참고: 캐주얼 D30 ROAS iOS 47%·Android 15%, 3-1 메모)", "3-2 점수 3~5위 채널. 틱톡·인플루언서는 소재 만들 여력이 생긴 뒤"),
+]
+T41, T4L = T4 + 1, T4 + len(stages)
+for k, s in enumerate(stages):
+    i = T41 + k
+    stage, when, reg_, osk, chan_, chkey, bud, cid, rreg, passc, why = s
+    put(ws, i, [stage, when, reg_, None, chan_, None, bud, cid, None, None, rreg, None, passc, why], wrap=True)
+    ws.cell(i, 1).font = BB
+    for c in (2, 5, 13, 14): ws.cell(i, c).fill = YEL
+    if osk:
+        ws.cell(i, 4).value = f'=IFERROR(INDEX({OSR}$C$1:$C$200,MATCH("{osk}",{OSR}$A$1:$A$200,0)),"확인 불가")'
+        ws.cell(i, 6).value = f'=IFERROR(INDEX({CH}$H${S1}:$H${SL},MATCH("{chkey}",{CH}$A${S1}:$A${SL},0))&"위","확인 불가")'
+        blue_in(ws.cell(i, 7), '"$"#,##0'); blue_in(ws.cell(i, 8)); blue_in(ws.cell(i, 11))
+        ws.cell(i, 9).value = f'=IFERROR(INDEX({CP}$E${A1_}:$E${AL_},MATCH(H{i},{CP}$A${A1_}:$A${AL_},0)),"")'
+        ws.cell(i, 10).value = f'=IFERROR(G{i}/I{i},"")'
+        ws.cell(i, 12).value = (f'=IFERROR(J{i}*SUMIFS({RB2}$C$2:$C${REGLAST},{RB2}$A$2:$A${REGLAST},K{i},'
+                                f'{RB2}$B$2:$B${REGLAST},"D7 리텐션"),"")')
+        ws.cell(i, 9).number_format = '"$"0.00'
+        for c in (10, 12): ws.cell(i, c).number_format = "#,##0"
+    for c in (3, 4, 6, 8, 9, 10, 11, 12): ws.cell(i, c).alignment = Alignment(horizontal="center", vertical="top", wrap_text=True)
+put(ws, T4L + 1, ["합계", "", "", "", "", "", f"=SUM(G{T41}:G{T4L})", "", "", f"=SUM(J{T41}:J{T4L})", "", f"=SUM(L{T41}:L{T4L})", "", ""])
+ws.cell(T4L + 1, 7).number_format = '"$"#,##0'
+for c in (10, 12): ws.cell(T4L + 1, c).number_format = "#,##0"
+for c in range(1, 15): ws.cell(T4L + 1, c).font = BB
+# ② 소재 계획
+T5 = T4L + 4
+ws.cell(T5 - 1, 1, "② 광고 소재 5종 (분석자 제안 — 3-3 발견을 2인 팀이 만들 수 있게 바꾼 것). 쉬운 D·A·B부터 시작").font = TITLE
+head_row(ws, T5, ["소재", "처음 3초에 보여 줄 것 (제안)", "참고한 3-3 근거", "2인 팀 제작 난이도 (분석자 판단)"])
+mats = [("A 호기심형", "'1%만 풀 수 있다' 같은 글자 + 거의 다 푼 퍼즐 화면", "Magic Sort! 호기심형 14/25 (3-3 ②)", "쉬움 — 게임 화면 녹화 + 글자"),
+        ("B 직접 제안형", "'무료 · 와이파이 없이' 같은 혜택 문구 + 게임 화면", "Royal Match 직접 제안형 24/25 (3-3 ②)", "쉬움 — 우리 게임에 실제로 맞는 혜택만 써야 함"),
+        ("C 일반인 반응형 (UGC)", "사람이 퍼즐을 보고 반응하는 장면", "Magic Sort! 형식 '일반인 말하기' 13/25 (3-3 ③), 실물 퍼즐 길거리 도전 2/10 (3-3 ⑤)", "보통 — 출연자 섭외·촬영 필요"),
+        ("D 게임 화면 그대로", "처음부터 실제 정렬 플레이 화면 (손가락 아이콘으로 옮기는 모습)", "Magic Sort! 처음 3초 7/10이 게임 화면 (3-3 ⑤)", "가장 쉬움 — 화면 녹화만"),
+        ("E 위기 장면형", "캐릭터가 위험에 빠진 장면 → 퍼즐로 구함", "Royal Match 처음 3초 6/10 (3-3 ⑤)", "어려움 — 캐릭터·연출 필요. 실제 게임에 있는 장면만 쓰는 것이 안전(분석자 판단)")]
+for k, m in enumerate(mats):
+    i = T5 + 1 + k
+    put(ws, i, list(m), wrap=True)
+    ws.cell(i, 1).font = BB
+    for c in (2, 4): ws.cell(i, c).fill = YEL
+# ③ 측정 지표
+T6 = T5 + 9
+ws.cell(T6 - 1, 1, "③ 측정 지표 — 매주 볼 숫자와 비교 기준 (기준값은 수식 또는 근거 시트 값)").font = TITLE
+head_row(ws, T6, ["지표", "쉬운 뜻", "비교 기준", "근거"])
+NA_ = lambda met, col: f'SUMIFS({RB2}${col}$2:${col}${REGLAST},{RB2}$A$2:$A${REGLAST},"북미",{RB2}$B$2:$B${REGLAST},"{met}")'
+mets = [
+ ("CPI", "설치 1번에 쓴 광고비", f'="미국 게임 전체 평균 $"&TEXT(INDEX({CP}$E${A1_}:$E${AL_},MATCH("C03",{CP}$A${A1_}:$A${AL_},0)),"0.00")', "3-1 C03 (Adjust 2026)"),
+ ("D1 리텐션", "설치 다음 날 다시 온 비율", f'="북미 중앙값 "&TEXT({NA_("D1 리텐션","C")},"0.0%")&" / 상위 10% "&TEXT({NA_("D1 리텐션","D")},"0.0%")', "4-1 지역 벤치마크(참조), 2-2"),
+ ("D7 리텐션", "7일 뒤 다시 온 비율", f'="북미 중앙값 "&TEXT({NA_("D7 리텐션","C")},"0.0%")&" / 상위 10% "&TEXT({NA_("D7 리텐션","D")},"0.0%")', "4-1 지역 벤치마크(참조), 2-2"),
+ ("D30 리텐션", "30일 뒤 다시 온 비율", f'="북미 중앙값 "&TEXT({NA_("D30 리텐션","C")},"0.0%")&" / 상위 10% "&TEXT({NA_("D30 리텐션","D")},"0.0%")', "4-1 지역 벤치마크(참조), 2-2"),
+ ("D30 광고비 회수율 (ROAS)", "30일 동안 번 돈 ÷ 쓴 광고비", "캐주얼 평균 iOS 47% · Android 15%", "Liftoff 2025 (3-1 메모)"),
+ ("소재별 설치 효율", "같은 돈으로 어느 소재가 설치를 더 많이 냈나", "공개 기준값 확인 불가 — 우리 소재 A~E끼리 비교", "② 소재 계획"),
+]
+for k, m in enumerate(mets):
+    i = T6 + 1 + k
+    put(ws, i, list(m), wrap=True)
+    ws.cell(i, 1).font = BB
+    if "확인 불가" in str(m[2]): ws.cell(i, 3).fill = YEL
+# 메모
+T7 = T6 + len(mets) + 3
+for k, t in enumerate([
+ "이 시트의 단계·지역·채널·예산·소재·합격 기준은 모두 분석자 제안이며, 실제 성과를 보장하지 않음. 예상 설치·D7 숫자는 공개 평균값으로 계산한 '참고용 추정'.",
+ "OS 열은 '4-7 대륙별 OS 분포(참조)'의 'OS 출시 우선순위'(분석자 제안, 기준값 50%)를 수식으로 가져옴. 채널 순위는 '3-2 광고 채널 분석' 점수표 순위.",
+ "CPI는 3-1의 지역별 값(iOS+Android 합산, 게임 전체)을 씀 — 퍼즐·OS별로 나눈 지역 값은 확인 불가.",
+ "1단계를 남미로 둔 이유(분석자 제안): CPI가 가장 싸서(3-1) 같은 돈으로 리텐션 표본을 많이 모을 수 있음. 단, 남미 리텐션 중앙값은 북미보다 낮음(4-1) — 비교는 같은 지역 기준으로.",
+ "MVP 후보(B4)를 바꾸면 위 요약 칸이 2-4에서 새로 계산됨. 3-3 광고 데이터는 Magic Sort!·Royal Match·MONOPOLY GO! 3개만 있음.",
+]):
+    ws.cell(T7 + k, 1, t).font = NOTE
+for col, w in zip("ABCDEFGHIJKLMN", [26, 34, 22, 16, 30, 16, 12, 10, 10, 12, 10, 12, 34, 44]):
+    ws.column_dimensions[col].width = w
+ws.freeze_panes = "B4"
+
 # ---------- (4) 개요 맨 아래 2줄 추가 ----------
 g = wb["개요"]
 nr = g.max_row + 1
 for k, (a, b_) in enumerate([
     ("6단계-3 출처 (2026-10-05 조회)", "2인 개발 MVP 판단: 3-2 매출 Top100·3-3 매출-다운로드 비교·1-2 Google Play Top100(모두 2026-10-04)을 게임전략 파일에 참조용 복사본으로 두고 수식으로 사용 + 세부 장르 점수는 분석자 판단. 광고 대비 유입: CPI — Adjust 'The gaming app insights report: 2026 edition' p.28~29(2024-01~2026-01), Liftoff·Singular '2025 Casual Gaming Apps Report'(2024-02~2025-02), 2차 인용 3건(Statista·Mistplay·GameDev Reports, 노란 칸). 리텐션 — GameAnalytics 2026 지역 표(4-2 / 게임전략 4-1 참조)."),
-    ("6단계-3 한계", "세부 장르 점수·2인 역할·MVP 기간은 분석자 판단/추정(근거 수치 없음). '지역×OS×장르'를 모두 나눈 CPI는 확인 불가. 광고 채널(3-2)·후킹 영상(3-3)·마케팅 실행안(3-4)은 다음 창에서 진행.")]):
+    ("6단계-3 한계", "세부 장르 점수·2인 역할·MVP 기간은 분석자 판단/추정(근거 수치 없음). '지역×OS×장르'를 모두 나눈 CPI는 확인 불가. 광고 채널 분석(3-2)의 채널별 게임 CPI는 확인 불가. 후킹 영상(3-3)은 AdWhispr 분류(게임당 25개 표본) + 영상 30개 처음 3초 분석자 판독(화면 캡처 2~3장 기준). 마케팅 실행안(3-4)은 전부 분석자 제안.")]):
     g.cell(nr + k, 1, a).font = BB; g.cell(nr + k, 1).border = BD
     c = g.cell(nr + k, 2, b_); c.font = B; c.border = BD; c.alignment = Alignment(wrap_text=True, vertical="top")
 
@@ -2253,7 +2656,7 @@ FILE_A = [
     (2, "국가별 장르 분포", "2-3 국가별 장르 분포", "국가별 Top20의 장르 집계 (수식 자동 집계)", ""),
     (2, "공통 인기 게임", "2-4 공통 인기 게임", "여러 나라에서 함께 순위권에 오른 게임", ""),
     (2, "지역별 특징", "2-5 지역별 특징", "지역·국가별 특징과 근거 게임", ""),
-    (2, "대륙별 OS 분포", "2-6 대륙별 OS 분포", "대륙·국가별 Android/iOS 점유율, 스토어별 게임 매출·다운로드, OS 출시 우선순위(분석자 제안)", "국가 12곳 포함 (StatCounter 2026-09)"),
+    (2, "대륙별 OS 분포", "2-6 대륙별 OS 분포", "대륙·국가별 Android/iOS 점유율, 스토어별 게임 매출·다운로드, OS 출시 우선순위(분석자 제안)", "국가 12곳 포함 (StatCounter 2026-09) · 게임전략 파일 4-7에 참조용 복사본 있음"),
     (2, "동남아 분석", "2-7 동남아 분석", "인도네시아 Top20·장르 집계·공통 게임·특징 + 동남아 벤치마크(2025 보고서)", "태국·베트남·필리핀·말레이시아 순위는 확인 불가"),
     (3, "매출 순위 원자료", "3-1 매출 순위 원자료", "미국·브라질·일본·한국 구글 플레이 매출 Top10 원자료", ""),
     (3, "매출 Top100", "3-2 매출 Top100", "미국 구글 플레이 매출 Top100 장르 분류 (기준일 2026-10-04) + 무료 Top100과 장르 비교", "게임전략 파일 4-5에 참조용 복사본 있음"),
@@ -2278,9 +2681,9 @@ FILE_B = [
     (2, "장르 연결(추정)", "2-3 장르 연결(추정)", "우리 장르 그룹 ↔ GameAnalytics 장르 연결 (4-3에서 가져옴)", ""),
     (2, "2인 개발 MVP 판단", "2-4 2인 개발 MVP 판단", "매출 Top100 + ③ 다운로드만 높은 게임 중 2명이 만들 수 있는 MVP 후보 (세부 장르 점수 → 게임 판정, 수식)", "6단계-3에서 만듦"),
     (3, "광고 대비 유입", "3-1 광고 대비 유입", "광고비 → 설치 수 → D1/D7/D30에 남는 사람 수 계산표 (CPI 출처표 + 4-1 리텐션)", "6단계-3에서 만듦"),
-    (3, None, "3-2 광고 채널 분석", "유튜브·인스타·페이스북·틱톡·인플루언서 비교", "예정 (3단계)"),
-    (3, None, "3-3 후킹 영상 분석", "광고 영상 처음 3초 유형별 빈도", "예정 (3단계)"),
-    (3, None, "3-4 마케팅 실행안", "우리 MVP용 마케팅 실행 계획", "예정 (3단계)"),
+    (3, "광고 채널 분석", "3-2 광고 채널 분석", "유튜브·인스타·페이스북·틱톡·인플루언서 비교 (공개 자료 + 2인 팀 점수표)", "6단계-3에서 만듦"),
+    (3, "후킹 영상 분석", "3-3 후킹 영상 분석", "Royal Match·MONOPOLY GO!·Magic Sort! 메타 광고의 후킹 유형·형식 빈도 (AdWhispr 분류)", "6단계-3에서 만듦 · 처음 3초는 메타 광고 라이브러리 화면 판독(분석자)"),
+    (3, "마케팅 실행안", "3-4 마케팅 실행안", "우리 MVP용 단계별 지역·OS·채널·예산·소재·측정 지표 (분석자 제안)", "6단계-3에서 만듦"),
     (4, "지역 벤치마크", "4-1 지역 벤치마크(참조)", "2-2 MVP 검증 목표가 쓰는 표의 복사본",
         "원본: 시장조사.xlsx › 4-2 지역 벤치마크"),
     (4, "장르 차트 판독값", "4-2 장르 차트 판독값(참조)", "4-3이 계산에 쓰는 판독값의 복사본",
@@ -2293,6 +2696,8 @@ FILE_B = [
         "원본: 시장조사.xlsx › 3-2 매출 Top100"),
     (4, "매출-다운로드 비교", "4-6 매출-다운로드 비교(참조)", "2-4가 쓰는 매출·무료 순위와 4가지 유형 분류의 복사본",
         "원본: 시장조사.xlsx › 3-3 매출-다운로드 비교"),
+    (4, "대륙별 OS 분포", "4-7 대륙별 OS 분포(참조)", "3-4가 쓰는 OS 점유율·OS 출시 우선순위 표의 복사본",
+        "원본: 시장조사.xlsx › 2-6 대륙별 OS 분포"),
 ]
 
 def sheet_list_text(spec, groups, other_file, other_desc):

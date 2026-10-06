@@ -1,0 +1,41 @@
+{
+  "validatedAt": "2026-10-06T00:38:29.421162+00:00",
+  "typecheck": "passed",
+  "dataVerify": "passed",
+  "productionBuild": "passed",
+  "pagesStaticBuild": "passed",
+  "playwright": {
+    "production": {
+      "tests": 24,
+      "passed": 24,
+      "url": "http://127.0.0.1:3001/"
+    },
+    "pages": {
+      "tests": 24,
+      "passed": 24,
+      "basePath": "/mobile-game-market-research/"
+    }
+  },
+  "manualBrowserViewports": [
+    [
+      1920,
+      1080
+    ],
+    [
+      1440,
+      1000
+    ],
+    [
+      834,
+      1000
+    ],
+    [
+      390,
+      844
+    ]
+  ],
+  "consoleErrors": 0,
+  "pageHorizontalOverflow": false,
+  "originalInputHashMatches": 3,
+  "deployed": false
+}
