@@ -632,3 +632,20 @@ Binance's radius hierarchy is tighter than typical marketing systems — most su
 - Form validation states beyond `{component.text-input-on-light}` defaults are not extracted — error / success input variants would need a sign-up or order-confirmation flow to confirm.
 - The trading dashboard surfaces (Spot / Futures / Margin) were not in the analyzed URL set; their order book, candlestick chart configuration, and position-management cards are not documented here.
 - The light/dark theme toggle behavior (whether transactional pages can be forced dark by user preference) is product behavior, not extracted from the marketing surfaces.
+
+---
+
+## Project tokens (PLAYFIELD, v2.1.0)
+
+Everything above is the supplied reference document and stays unchanged. This section records the colors PLAYFIELD adds or adjusts on top of it. The site keeps the dark canvas (`#0B0E11`) with the yellow brand accent. Values live in `src/app/design-theme.css`.
+
+**Rule: brand yellow and data-status yellow never look the same.** Brand yellow `#FCD535` is a solid fill (buttons, active tabs, selection), or a number/link color on the dark canvas. A workbook "노란 칸" (estimate, chart reading, needs check) is shown as a **dashed amber outline with a warning icon and a text label**, never as a yellow fill. Yellow is never used as text on a white or light background (1.43:1).
+
+| Token | HEX | Use | Contrast (WCAG) |
+|---|---|---|---|
+| `--status-verified` (new) | `#5AD19A` | "확인됨" badge text, border and check icon; green left bar on verified sheet cells (workbook fill `E2EFDA`) | 10.16 on `#0B0E11`, 8.30 on `#1E2329`, 6.88 on `#2B3139` |
+| `--status-proposal` (new) | `#A99BF5` | "분석자 입력·제안" / "분석자 판독·평가": dotted badge and dotted-underlined cell text (workbook blue font `0000FF`, analyst readings and proposals) | 8.01 on `#0B0E11`, 6.55 on `#1E2329`, 5.43 on `#2B3139` |
+| `--status-flag` (existing `primary-active`) | `#F0B90B` | Dashed outline and warning icon only for "노란 칸 · 추정·판독·확인 필요" (workbook fill `FFF2CC`), AI classification and estimates. Badge text stays `--ink` | Icon/border 10.74 on `#0B0E11`; label text `#EAECEF` 16.35 |
+| `--footer-muted` (adjusted) | `#5E6673` | Footer secondary text on the light footer `#FAFAFA` (was `#707A8A`, 4.16:1, below AA) | 5.55 on `#FAFAFA` |
+
+Each status pairs color with a second cue (icon, dashed/dotted/solid border, or label), so it still reads without color. Body text pairs in use: `#EAECEF` 16.35, `#929AA5` 6.81 on canvas and 4.61 on `#2B3139` table headers, `#CDD1D6` 12.61. All are at least 4.5:1.

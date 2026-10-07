@@ -15,6 +15,11 @@
   --dark: #1e2329;
   /* Store series are categorical, not price-direction green/red. */
   --green: #929aa5;
+  /* Data status (see DESIGN.md "Project tokens"). Never the brand yellow fill. */
+  --status-verified: #5ad19a;
+  --status-proposal: #a99bf5;
+  --status-flag: #f0b90b;
+  --footer-muted: #5e6673;
   --font-body: 'Inter Variable', 'Noto Sans KR', sans-serif;
   --font-number: 'IBM Plex Sans', 'Noto Sans KR', sans-serif;
 }
@@ -90,7 +95,7 @@ h2, .section-title h2, .editorial h2, .region-item h3, .opportunity-row h3,
 .rank-chart-compact .rank-chart-value { font-size: 17px; font-weight: 500; }
 .rank-chart-compact .rank-chart-track { height: 3px; }
 .rank-missing { color: var(--muted); font-size: inherit; }
-footer { background: #fafafa; color: #707a8a; }
+footer { background: #fafafa; color: var(--footer-muted); }
 footer .footer-brand { color: #181a20; }
 footer a { color: #181a20; }
 @media(max-width:900px) {

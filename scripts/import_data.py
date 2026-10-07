@@ -19,6 +19,17 @@ def clean(value):
     value = unicodedata.normalize("NFC", str(value))
     return value.strip()
 
+# Workbook cell meaning, from 0-1 개요 and each sheet's legend. Other fills (header colors,
+# 1-6 "해당" green, grey "?") are not data states and stay unmarked.
+STATUS_FILLS = {"FFF2CC": "flagged", "E2EFDA": "verified"}
+
+def cell_status(cell):
+    """A cell can carry both marks, e.g. a yellow assumption typed in blue (3-3 B2)."""
+    fill = cell.fill.fgColor.rgb if cell.fill and cell.fill.fill_type == "solid" else None
+    color = cell.font.color.rgb if cell.font and cell.font.color is not None else None
+    marks = [STATUS_FILLS[fill[-6:].upper()]] if isinstance(fill, str) and fill[-6:].upper() in STATUS_FILLS else []
+    return marks + (["input"] if isinstance(color, str) and color[-6:].upper() == "0000FF" else [])
+
 def key(name):
     name = unicodedata.normalize("NFKD", name).casefold()
     return re.sub(r"[^a-z0-9가-힣]", "", name)
@@ -50,16 +61,26 @@ def main():
             blanks = {cell.coordinate: 'intentionalBlank' if '""' in cell.value else 'uncachedFormula'
                       for cells in formula_books[filename][sheet.title] for cell in cells
                       if cell.data_type == 'f' and sheet[cell.coordinate].value is None}
+            status = {c.coordinate: s for cells in sheet.iter_rows() for c in cells
+                      if c.value is not None and (s := cell_status(c))}
             documents.append({"id": key(filename + sheet.title), "file": filename,
-                              "sheet": sheet.title, "rows": rows, "formulas": formulas, "blankStates": blanks})
+                              "sheet": sheet.title, "rows": rows, "formulas": formulas, "blankStates": blanks,
+                              "cellStatus": status})
         workbooks[filename] = sheets
     if not workbooks:
         raise ValueError("No XLSX workbooks found")
     market = next(v for k, v in workbooks.items() if "시장조사" in k)
     strategy = next(v for k, v in workbooks.items() if "게임전략" in k)
     overview = {r[0]: r[1] for r in market["0-1 개요"] if r[0] and r[1]}
+    # 3-4 G column is the analyst's own App Store -> Google Play name match; honour it before any record is added.
+    for values in market["3-4 App Store 매출 Top100"][1:]:
+        if isinstance(values[1], str) and isinstance(values[6], str) and values[6] not in ("-", "") and key(values[1]) != key(values[6]):
+            alias_lookup[key(values[1])] = alias_lookup.get(key(values[6]), key(values[6]))
     observations = []
     games = {}
+    # Rows whose workbook cells are yellow (estimate / reading / needs check), per market sheet.
+    flagged_rows = {d["sheet"]: {int(re.sub(r"[A-Z]+", "", c)) for c, v in d["cellStatus"].items() if "flagged" in v}
+                    for d in documents if d["file"] == "시장조사.xlsx"}
     def add(name, publisher, genre, subgenre, country, store, date, rank, chart, sheet, row, notes=None, url=None):
         if not isinstance(rank, int) or not 1 <= rank <= 100:
             return
@@ -70,12 +91,12 @@ def main():
                               "developer": None, "genre": genre, "subgenre": subgenre,
                               "gameplay": None, "monetization": None, "marketing": None,
                               "artStyle": None, "audience": None, "playerAge": None,
-                              "downloads": None, "revenue": None, "analysis": None,
+                              "downloads": None, "installRange": None, "revenue": None, "analysis": None,
                               "evidence": None, "missing": missing, "marketingHook": None}
         observations.append({"id": f"{country}-{store}-{chart}-{date}-{rank}", "gameId": game_id,
                              "name": name, "publisher": publisher, "genre": genre, "subgenre": subgenre,
                              "country": country, "store": store, "date": date, "year": int(date[:4]),
-                             "rank": rank, "chart": chart, "notes": notes,
+                             "rank": rank, "chart": chart, "notes": notes, "flagged": row in flagged_rows.get(sheet, set()),
                              "source": {"file": "시장조사.xlsx", "sheet": sheet, "row": row, "url": url}})
     for store, sheet, url in [("ios", "1-1 App Store Top100", "https://gamedropdaily.com/mobile/"),
                                ("android", "1-2 Google Play Top100", "https://www.appbrain.com/stats/google-play-rankings/top_free/game/us")]:
@@ -94,6 +115,10 @@ def main():
         rank, name, publisher, genre, subgenre, notes = values[:6]
         add(name, publisher, genre, subgenre, "미국", "android", config["grossingDate"], rank, "grossing",
             "3-2 매출 Top100", row, notes, "https://www.appbrain.com/stats/google-play-rankings/top_grossing/game/us")
+    for row, values in enumerate(market["3-4 App Store 매출 Top100"][1:], 2):
+        rank, name, publisher, genre, subgenre, basis, _, _, notes = values[:9]
+        add(name, publisher, genre, subgenre, "미국", "ios", config["appStoreGrossingDate"], rank, "grossing",
+            "3-4 App Store 매출 Top100", row, notes or basis, "https://www.appbrain.com/stats/appstore-rankings/top_grossing/games/us")
     for sheet in ["1-4 성공 비결 해부", "1-5 성공 비결 확장"]:
         for row, values in enumerate(strategy[sheet][1:], 2):
             if not values[0]:
@@ -107,12 +132,17 @@ def main():
                              "marketing": values[7] if expanded else values[5], "artStyle": values[8] if expanded else values[6],
                              "evidence": values[9] if expanded else values[7],
                              "analysis": {"file": "게임전략_MVP_마케팅.xlsx", "sheet": sheet, "row": row, "kind": "analystReading", "originalText": values[offset]}})
-    for values in market["3-3 매출-다운로드 비교"][5:]:
-        if values[0] and isinstance(values[3], (int, float)):
-            game = games.get(identity(values[0]))
-            if game:
-                game["downloads"] = {"value": values[3], "kind": "AppBrain 추정 누적 설치", "date": config["installEstimateDate"],
-                                     "store": "android", "country": None}
+    install_status = next(d["cellStatus"] for d in documents if d["file"] == "시장조사.xlsx" and d["sheet"] == "3-3 매출-다운로드 비교")
+    for row, values in enumerate(market["3-3 매출-다운로드 비교"][5:], 6):
+        game = games.get(identity(values[0])) if values[0] else None
+        if game and isinstance(values[3], (int, float)):
+            game["downloads"] = {"value": values[3], "kind": "AppBrain 추정 누적 설치", "date": config["installEstimateDate"],
+                                 "store": "android", "country": None}
+        if game and values[5]:
+            urls = re.findall(r"https?://\S+", str(values[8] or ""))
+            game["installRange"] = {"range": values[5], "released": values[6],
+                                    "flagged": [c for c in "FG" if "flagged" in install_status.get(f"{c}{row}", [])],
+                                    "source": {"file": "시장조사.xlsx", "sheet": "3-3 매출-다운로드 비교", "row": row, "url": urls[0] if urls else None}}
     for name, hook in hooks.items():
         game = games.get(identity(name))
         if game:
@@ -150,9 +180,27 @@ def main():
                 if game[field] and re.search(pattern, game[field], re.I):
                     kind = 'estimate' if '추정' in game[field] else 'analystReading'
                     game['tags'].append({'label': label, 'field': field, 'originalText': game[field], 'source': {**game['analysis'], 'kind': kind, 'originalText': game[field]}, 'kind': kind})
-    dataset = {"schemaVersion": 2, "importedAt": datetime.now(timezone.utc).isoformat(),
+    # Site menu and update log come from each workbook's own 0 목차 / 0-1 개요, so new sheets need no code change.
+    toc = [{"file": name, "items": [{"group": r[0], "sheet": r[1], "description": r[2], "status": r[3], "note": r[4]}
+                                    for r in sheets["0 목차"][4:] if r[0] and r[1]]}
+           for name, sheets in workbooks.items()]
+    changelog = {}
+    for row, values in enumerate(market["0-1 개요"], 1):
+        match = re.match(r"(\d+단계(?:-\d+)?) (출처|한계)(?: \((\d{4}-\d{2}-\d{2}) 조회\))?", str(values[0] or ""))
+        if match:
+            entry = changelog.setdefault(match[1], {"stage": match[1], "date": None, "sources": None, "limits": None, "sheets": [], "row": row})
+            entry["sources" if match[2] == "출처" else "limits"] = values[1]
+            entry["date"] = entry["date"] or match[3]
+    for book in toc:
+        for item in book["items"]:
+            for stage in re.findall(r"\d+단계(?:-\d+)?", str(item["note"] or "")):
+                changelog.setdefault(stage, {"stage": stage, "date": None, "sources": None, "limits": None, "sheets": [], "row": None})["sheets"].append(
+                    {"file": book["file"], "sheet": item["sheet"], "note": item["note"]})
+    stage_order = lambda e: [int(n) for n in re.findall(r"\d+", e["stage"])]
+    dataset = {"schemaVersion": 3, "importedAt": datetime.now(timezone.utc).isoformat(),
                "games": list(games.values()), "observations": observations, "documents": documents,
-               "files": [{"name": name, "sheets": len(sheets)} for name, sheets in workbooks.items()], "publisherAliases": publisher_aliases, **research}
+               "files": [{"name": name, "sheets": len(sheets)} for name, sheets in workbooks.items()], "publisherAliases": publisher_aliases,
+               "toc": toc, "changelog": sorted(changelog.values(), key=stage_order, reverse=True), **research}
     (ROOT / "data/market.json").write_text(json.dumps(dataset, ensure_ascii=False, indent=2))
     print(f"Imported {len(games)} games, {len(observations)} observations, {len(documents)} sheets")
 
