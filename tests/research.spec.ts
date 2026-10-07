@@ -1,6 +1,9 @@
 import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
 import data from '../data/market.json' with {type:'json'};
+import {hashFor,sections} from '../src/lib/routes';
+/** Navigate inside the open page (keeps local state) via the same hash links the menu uses. */
+const go=(page:import('@playwright/test').Page,target:string)=>page.evaluate(h=>{location.hash=h},target.startsWith('#')?target:hashFor(sections.find(([,label])=>label===target)![0]));
 import {channelScore,planResult,latestRecords} from '../src/lib/analysis';
 import type {Observation,PlanPhase} from '../src/lib/schema';
 
@@ -36,7 +39,8 @@ test('repeat observations keep each country/store/chart date independently',()=>
   const newer={...old,id:'new-snapshot',date:'2026-10-06'} as Observation;
   const records=latestRecords([...(data.observations as Observation[]),newer]);
   expect(records.filter(o=>o.country==='미국'&&o.store==='android'&&o.chart==='free')).toEqual([newer]);
-  expect(records.filter(o=>o.country==='미국'&&o.store==='ios')).toHaveLength(100);
+  expect(records.filter(o=>o.country==='미국'&&o.store==='ios'&&o.chart==='free')).toHaveLength(100);
+  expect(records.filter(o=>o.country==='미국'&&o.store==='ios'&&o.chart==='grossing')).toHaveLength(100);
   expect(records.filter(o=>o.country==='인도네시아')).toHaveLength(20);
 });
 
@@ -59,13 +63,13 @@ test('same-condition aggregation, filter scope, genre units and publishers are e
   await page.getByRole('combobox',{name:'퍼블리셔 집계'}).selectOption('records');
   await expect(page.locator('.publisher-panel')).toContainText('중복 제외');
   await expect(page.locator('.publisher-panel')).toContainText('기록');
-  await page.getByRole('button',{name:'게임플레이',exact:true}).click();
+  await go(page,'게임플레이');
   await expect(page.locator('.analysis-coverage')).toContainText('분석 미작성');
   await expect(page.locator('.tag-summary')).toContainText('미분류');
 });
 
 test('channel weights, sample definitions, duplicates and budget invalid states work',async({page})=>{
-  await page.goto('./');await page.getByRole('button',{name:'마케팅',exact:true}).click();
+  await page.goto('./');await go(page,'마케팅');
   await expect(page.locator('.channel-panel .number-bars')).toContainText('94점');
   await page.getByRole('spinbutton',{name:'광고 도달 크기 가중치'}).fill('19');
   await expect(page.locator('.channel-panel .input-error')).toContainText('99%');
@@ -96,7 +100,7 @@ test('channel weights, sample definitions, duplicates and budget invalid states 
 });
 
 test('region fixed filters, OS units, percentile benchmarks and MVP missing values work',async({page})=>{
-  await page.goto('./');await page.getByRole('button',{name:'지역 비교',exact:true}).click();
+  await page.goto('./');await go(page,'지역 비교');
   await expect(page.getByRole('combobox',{name:'시장',exact:true})).toBeDisabled();
   await expect(page.getByRole('combobox',{name:'시장',exact:true})).toHaveValue('all');
   await expect(page.getByRole('combobox',{name:'스토어',exact:true})).toHaveValue('android');
@@ -113,7 +117,7 @@ test('region fixed filters, OS units, percentile benchmarks and MVP missing valu
   await expect(page.locator('.benchmark-explorer')).toContainText('2024년 지역별 중앙값');
   await page.getByRole('combobox',{name:'벤치마크 지표'}).selectOption('D28 리텐션');
   await expect(page.locator('.benchmark-explorer .number-bars')).toContainText('0.82%');
-  await page.getByRole('button',{name:'개발 기회',exact:true}).click();
+  await go(page,'개발 기회');
   await page.getByRole('combobox',{name:'벤치마크 백분위'}).selectOption('P90');
   await expect(page.locator('.benchmark-explorer .number-bars')).toContainText('12.58%');
   await page.getByRole('combobox',{name:'벤치마크 범위'}).selectOption('genre');
@@ -166,7 +170,7 @@ test('local chart controls and expanded evidence restore without hydration error
   await expect(page.getByRole('combobox',{name:'퍼블리셔 집계'})).toHaveValue('records');
   await page.reload();
   await expect(page.getByRole('button',{name:'장르 구성비',exact:true})).toHaveClass('active');
-  await page.getByRole('button',{name:'지역 비교',exact:true}).click();
+  await go(page,'지역 비교');
   await page.getByRole('combobox',{name:'OS 표시 범위'}).selectOption('continent');
   await page.locator('.os-chart details').first().locator('summary').click();
   await page.locator('.os-chart details').first().locator('.source-link').first().click();
@@ -180,16 +184,49 @@ for(const width of [1920,1440,834,390]) test(`new charts, inputs and source tabl
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400&&r.url().includes('127.0.0.1'))errors.push(`${r.status()} ${r.url()}`);});
   await page.setViewportSize({width,height:1000});await page.goto('./');
   for(const section of ['마케팅','지역 비교','개발 기회']) {
-    await page.getByRole('button',{name:section,exact:true}).click();
+    await go(page,section);
     await page.locator(section==='마케팅'?'.channel-panel':section==='지역 비교'?'.regional-research':'.mvp-research').scrollIntoViewIfNeeded();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
     await page.screenshot({path:`test-results/new-${section}-${width}.png`});
     if(section==='마케팅'&&width===1440) await page.locator('.channel-panel').screenshot({path:'test-results/marketing-channels-1440.png'});
     if(section==='지역 비교'&&(width===1440||width===390)) await page.locator('.region-grid').screenshot({path:`test-results/region-charts-${width}.png`});
   }
-  await page.getByRole('button',{name:'자료·출처',exact:true}).click();
-  await page.getByRole('combobox',{name:'원자료 시트'}).selectOption(data.documents.find(d=>d.sheet==='2-4 2인 개발 MVP 판단')!.id);
+  await go(page,'#/strategy/2-4');
   await expect(page.locator('.raw-table')).toContainText('의도적 빈 수식 결과');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('menu: four top items, every workbook sheet reachable from its 0 목차 sidebar, mobile drawer by keyboard',async({page})=>{
+  const errors:string[]=[];page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+  await page.goto('./');
+  await expect(page.getByRole('navigation',{name:'주요 메뉴'}).getByRole('link')).toHaveText(['홈','시장조사','게임전략','업데이트 기록']);
+  let visited=0;
+  for(const [label,slug] of [['시장조사','market'],['게임전략','strategy']]) {
+    await page.getByRole('navigation',{name:'주요 메뉴'}).getByRole('link',{name:label}).click();
+    await expect(page.getByRole('heading',{level:1})).toHaveText('0 목차');
+    const toc=page.getByRole('navigation',{name:`${label} 목차`});
+    const hrefs=await toc.locator('a[href*="/'+slug+'/"]').evaluateAll(as=>as.map(a=>a.getAttribute('href')!));
+    const sheets=data.toc.find(t=>t.file.startsWith(label))!.items;
+    expect(hrefs.filter(h=>/\/\d/.test(h))).toHaveLength(sheets.length);
+    for(const [i,href] of hrefs.entries()) {
+      await go(page,href);
+      const sheet=sheets.find(x=>href.endsWith('/'+x.sheet.split(' ')[0]));
+      await expect(page.getByRole('heading',{level:1})).toHaveText(sheet ? sheet.sheet : /.+/);
+      if(sheet) {visited++;await expect(toc.locator('a[aria-current=page]')).toHaveText(new RegExp(sheet.sheet.slice(sheet.sheet.indexOf(' ')+1).replace(/[()]/g,'.')));}
+      if(i===0) expect(await page.locator('.raw-table').count()).toBe(1);
+    }
+  }
+  expect(visited).toBe(51);
+  await go(page,'#/updates');
+  await expect(page.locator('.changelog li h2').first()).toContainText(data.changelog[0].stage);
+  await page.setViewportSize({width:375,height:812});
+  await go(page,'#/market/3-4');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  const toggle=page.getByRole('button',{name:/시장조사 목차/});
+  await toggle.focus();await page.keyboard.press('Enter');
+  await expect(toggle).toHaveAttribute('aria-expanded','true');
+  await page.keyboard.press('Tab');await page.keyboard.press('Escape');
+  await expect(toggle).toHaveAttribute('aria-expanded','false');await expect(toggle).toBeFocused();
   expect(errors).toEqual([]);
 });

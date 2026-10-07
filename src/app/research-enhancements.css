@@ -169,3 +169,47 @@ details p{margin:10px 0;color:var(--secondary);font-size:14px}
   .comparison-table th:first-child{max-width:100px;min-width:100px;white-space:normal}
   .rank-chart-compact{min-width:50px}
 }
+
+/* Workbook navigation: top bar keeps four items; each workbook's 0 목차 groups live in the sidebar. */
+.with-toc{display:grid;grid-template-columns:232px minmax(0,1fr);column-gap:40px;align-items:start}
+.with-toc>footer{grid-column:1/-1}
+.main-column{min-width:0}
+.workbook-toc{position:sticky;top:16px;margin-top:34px;max-height:calc(100vh - 32px);overflow:auto;scrollbar-width:thin;font-size:13px}
+.toc-toggle{display:none}
+.toc-title{font-size:15px;font-weight:600;color:var(--ink);padding:0 0 12px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.toc-title small,.workbook-toc summary small{font-family:var(--font-number);font-size:11px;color:var(--muted);font-weight:400;margin-left:6px}
+.workbook-toc details{border-bottom:1px solid var(--line)}
+.workbook-toc summary{cursor:pointer;padding:11px 4px;font-weight:600;color:var(--ink);list-style-position:inside}
+.workbook-toc summary:focus-visible,.workbook-toc a:focus-visible{outline:2px solid #3b82f6;outline-offset:-2px}
+.workbook-toc ul{list-style:none;margin:0 0 10px;padding:0}
+.workbook-toc li a{display:flex;gap:8px;align-items:baseline;padding:7px 8px;color:var(--secondary);line-height:1.45;border-left:2px solid transparent}
+.workbook-toc li a:hover{color:var(--ink);background:var(--surface)}
+.workbook-toc li a[aria-current=page]{color:var(--ink);font-weight:600;border-left-color:var(--accent);background:var(--surface)}
+.toc-num{font-family:var(--font-number);font-size:12px;color:var(--muted);min-width:26px}
+.toc-view{align-items:center!important}
+.toc-view svg{color:var(--accent);flex-shrink:0}
+.nav-item{display:inline-block}
+@media(max-width:1023px){
+  .with-toc{display:block}
+  .workbook-toc{position:static;max-height:none;overflow:visible;margin-top:20px}
+  .toc-toggle{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:10px 14px;border:1px solid var(--line);background:var(--surface);text-align:left}
+  .toc-toggle span{flex:1;display:flex;flex-direction:column;font-weight:600;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .toc-toggle small{font-size:11px;font-weight:400;color:var(--muted)}
+  .toc-toggle .flip{transform:rotate(180deg)}
+  .toc-panel{display:none;border:1px solid var(--line);border-top:0;padding:8px 14px;background:var(--paper)}
+  .toc-panel.open{display:block}
+  .workbook-toc li a{min-height:44px;align-items:center}
+}
+
+/* Update log */
+.changelog ol{list-style:none;margin:24px 0 0;padding:0}
+.changelog li{padding:24px 0;border-top:1px solid var(--line)}
+.changelog h2{font-size:20px;font-weight:600;display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+.changelog time{font-family:var(--font-number);font-size:13px;font-weight:400;color:var(--muted)}
+.changelog li>div{display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;margin-top:14px}
+.changelog strong{font-size:13px;color:var(--ink)}
+.changelog p{color:var(--secondary);font-size:14px;max-width:80ch}
+.changelog-sheets ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.changelog-sheets li{padding:0;border:0;display:flex;gap:12px;flex-wrap:wrap;align-items:baseline}
+.changelog-sheets small{color:var(--muted);font-size:12px}
+@media(max-width:600px){.changelog li>div{grid-template-columns:1fr;gap:6px}}
