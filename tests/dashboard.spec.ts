@@ -1,13 +1,14 @@
 import {test,expect} from '@playwright/test';
 import fs from 'node:fs';
 import data from '../data/market.json' with {type:'json'};
+import pkg from '../package.json' with {type:'json'};
 import {hashFor,sections} from '../src/lib/routes';
 /** Navigate inside the open page (keeps local state) via the same hash links the menu uses. */
 const go=(page:import('@playwright/test').Page,target:string)=>page.evaluate(h=>{location.hash=h},target.startsWith('#')?target:hashFor(sections.find(([,label])=>label===target)![0]));
 
 test('rank graphs use the selected ordinal scale and distinguish missing observations', async ({page}) => {
   await page.goto('./');
-  await expect(page.locator('.report-meta')).toContainText('v2.0.0');
+  await expect(page.locator('.report-meta')).toContainText(`v${pkg.version}`);
   await page.getByRole('textbox',{name:'게임 검색'}).fill('Meowdoku');
   const rankCells=page.locator('.rank-value');
   await expect(rankCells).toHaveText(['1','2']);
