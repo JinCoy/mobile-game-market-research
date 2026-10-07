@@ -1,5 +1,5 @@
 # =====================================================================
-# 모바일 게임 시장 분석 — 스프레드시트 생성 코드 (6단계-3: 2인 개발 MVP 판단·광고 대비 유입까지 반영)
+# 모바일 게임 시장 분석 — 스프레드시트 생성 코드 (6단계-4: 남은 빈칸 채우기까지 반영)
 #  [1부] 기존 시트 28개를 만드는 코드 (데이터·수식·서식 그대로, 변경 없음)
 #  [2부] 만들어진 시트를 파일 2개로 나눠 저장
 #        A) 시장조사.xlsx               : 시장·지역·플랫폼·벤치마크 '숫자' 자료
@@ -2612,12 +2612,698 @@ for col, w in zip("ABCDEFGHIJKLMN", [26, 34, 22, 16, 30, 16, 12, 10, 10, 12, 10,
     ws.column_dimensions[col].width = w
 ws.freeze_panes = "B4"
 
+# ---------- (9) 광고 소재 해부 (메타 광고 라이브러리 영상 12개, 2026-10-05) ----------
+ws = wb.create_sheet("광고 소재 해부")
+ws["A1"] = "광고 소재 해부 — 게임별 4개씩 12개 영상: 도파민(보상·긴장) 요소 · 영상 효과 · 광고 구성 · 사운드(사용자 기입)"; ws["A1"].font = TITLE
+ws["A2"] = ("보는 법: 메타 광고 라이브러리에서 영상을 열고 0·1·2·3·4·6·8·10·12·15·20초와 마지막 장면(12장)을 캡처해 판독. "
+            "길이·크기는 영상 파일에서 잰 측정값, 나머지(노란 칸)는 분석자 판독 — 캡처 사이 장면은 보지 못함. "
+            "T~Y열(사운드)은 사용자가 직접 듣고 고르는 칸(파란 글씨)")
+ws["A2"].font = NOTE
+HR = 4
+head_row(ws, HR, ["게임", "Meta 광고 라이브러리 ID", "길이 (초, 측정)", "가로 px (측정)", "세로 px (측정)", "화면 비율 (수식)",
+                  "처음 3초 (판독)", "위기·실패 장면", "위기 시작 → 해소 (초, 판독)", "일부러 틀리기·실패 연출",
+                  "첫 보상 연출 (판독)", "만족감 장면", "진행 표시", "실사 사람·손", "큰 장면 전환 수 (12장 기준)",
+                  "눈에 띄는 영상 효과", "엔드카드", "엔드카드 내용", "메모",
+                  "[사운드] 배경음악", "[사운드] 음악 분위기", "[사운드] 효과음 종류", "[사운드] 목소리·나레이션",
+                  "[사운드] 장면 전환이 박자와 맞음", "[사운드] 소리 없이도 이해됨"])
+NS = "샘플에서 안 보임"
+deep = [
+ ("Royal Match", "1360608269119654", 59.1, 360, 450, "실사 손가락이 핀을 당기는 퍼즐, 왕 아래는 용암", "있음",
+  "0초 위기 → 10초 실패(블록이 왕을 맞힘) → 12초 매치3 판으로 전환", "있음", NS, "—", NS, "있음", 2, "불꽃(6초)", "예",
+  "로고 + 게임 화면 모음 + Play Now", ""),
+ ("Royal Match", "1309645668892427", 59.7, 360, 540, "진흙 속 왕 클로즈업 → 실사 손이 호스로 씻김", "있음",
+  "0초 진흙에 묻힘 → 6초 깨끗해짐(해소) → 8초 물 찬 방(새 위기)", NS, NS, "씻기(청소)", "목표 아이콘 (10초~)", "있음", 2,
+  "흐림·카메라 이동(1초)", "예", "로고 + 다음 레벨 고르기 화면 ('Choose the next level!')", ""),
+ ("Royal Match", "1392560629687289", 59.7, 360, 640, "3D 상자가 갈리며 자갈이 쏟아짐", "있음",
+  "6초 자갈이 왕 쪽으로 쏟아짐 → 20초까지 점점 차오름", NS, NS, "부수기·쏟아지기", "자갈 높이 (긴장 표시)", "있음", 2,
+  "파편·입자가 쏟아짐", "예", "로고 + 게임 화면 모음 + Play Now", ""),
+ ("Royal Match", "1089702293564432", 59.7, 360, 360, "왕이 물살에 미끄러져 물 찬 방에 갇힘", "있음",
+  "0초 미끄러짐 → 1초 갇힘 → 20초까지 매치3로 구출 진행", NS, NS, "—", NS, "있음", 2, "물 흐름", "예",
+  "로고 + 게임 화면 모음 + Play Now", "메타에 '여러 버전이 있는 광고'로 표시 — 본 영상은 그중 1개"),
+ ("MONOPOLY GO!", "1674823853701845", 17.0, 640, 360, "동물 조각상 클로즈업 → 실사 손에 든 휴대폰 게임 화면", "있음",
+  "2초 철창 속 배우(코믹하게 갇힘)", NS, NS, "—", "—", "있음", 7, "큰 자막(8초), 실사 → 3D 게임 화면 전환", "예",
+  "로고 + 이벤트 캐릭터 + 이벤트 문구 + 버튼 (14초~, 약 3초)", "이탈리아어 문구 — 유럽 대상 광고로 보임"),
+ ("MONOPOLY GO!", "796330853023057", 29.5, 640, 360, "3D 보드 도시 → 미스터 모노폴리 → 'GO TO JAIL' 칸", "있음",
+  "3초 감옥 + '도와줘(AIUTO!)' 말풍선 → 4~20초 블록 밀기 퍼즐로 열쇠 꺼내기", NS, NS, "블록 밀기 퍼즐", "열쇠 위치",
+  "없음", 6, "말풍선 글자 팝", "예", "보드 + 로고 + 'GIOCA ORA'(지금 플레이) 버튼", "광고 속 퍼즐이 실제 게임에 있는지는 확인 불가"),
+ ("MONOPOLY GO!", "2424531614685734", 21.6, 360, 360, "심슨 집 거실을 위에서 비추고 바트·개가 뜀", "있음",
+  "8초 바트가 감옥(철창)에 들어감", NS, "3초 '7,500' 돈 숫자", "—", "보드 칸 이동", "없음", 6, "숫자 팝업", "아니오",
+  "게임 장면으로 끝남", ""),
+ ("MONOPOLY GO!", "1012642531160291", 40.5, 360, 360, "미스터 모노폴리와 호머가 빨간 버튼 앞에서 놀람", "있음",
+  "4초 노란 폭발 플래시, 15초 경고 아이콘, 20초 감옥", NS, "12초 '+150K' 숫자", "—", "보드 칸 이동", "없음", 7,
+  "화면 플래시(4초), 초록 연기 입자(6~10초)", "예", "로고 + 캐릭터 2명 + 버튼", ""),
+ ("Magic Sort!", "1556811082584487", 56.2, 360, 640, "길거리 실물 퍼즐 도전 + 'Only 1%' 팻말 + 구경꾼", "없음",
+  "—", NS, NS, "액체 붓기·채우기", "완성된 병이 늘어남", "있음", 2, "실사 → 게임 화면 전환(약 7초)", "예", "로고 + Play Now", ""),
+ ("Magic Sort!", "3985548428413528", 60.0, 360, 640, "병이 가득한 정렬 화면 + 손가락 아이콘", "없음",
+  "—", NS, "단색 병 완성 (작은 보상으로 판독)", "정렬(정리)", "완성된 병이 늘어남", "없음", 0, "손가락 아이콘·붓기 애니메이션",
+  "아니오", "플레이 화면으로 끝남", "60초 내내 한 장면"),
+ ("Magic Sort!", "1065385889771960", 26.8, 360, 360, "실사풍 3D 병에 액체 붓기 → 2초 유리 깨짐", "있음",
+  "2·4초 병이 깨짐 → 21초 휴대폰 속 실제 게임 화면", "있음 (깨짐을 실패 연출로 판독)", NS, "붓기·부수기", "—", "없음", 2,
+  "유리 파편", "예", "휴대폰 여러 대에 게임 화면 + 손가락", "3D 연출은 실제 게임 화면(2D)과 다름"),
+ ("Magic Sort!", "1032627419485915", 28.3, 360, 640, "가운데 긴 튜브 + 꽉 찬 색 블록 정렬 화면", "없음",
+  "—", NS, "긴 튜브가 차오름 (진행 보상으로 판독)", "채우기", "긴 튜브 높이", "없음", 1, "붓기 애니메이션", "예", "로고 + Play Now", ""),
+]
+assert all(d[1] in {a[1] for a in ads30} for d in deep)
+X1, XL = HR + 1, HR + len(deep)
+for k, d in enumerate(deep):
+    i = X1 + k
+    g, aid, ln, w_, h_ = d[:5]
+    rest = list(d[5:])
+    put(ws, i, [g, aid, ln, w_, h_, f'=IF(D{i}>E{i},"가로형 ",IF(D{i}=E{i},"정사각형 ","세로형 "))&TEXT(D{i}/E{i},"0.00")'] + rest, wrap=True)
+    ws.cell(i, 1).font = BB
+    ws.cell(i, 2).number_format = "@"
+    for c in range(7, 20): ws.cell(i, c).fill = YEL
+    for c in range(20, 26):
+        cc = ws.cell(i, c); cc.font = BLUE_IN; cc.border = BD
+    for c in (3, 4, 5, 6, 8, 10, 14, 15, 17): ws.cell(i, c).alignment = Alignment(horizontal="center", vertical="top", wrap_text=True)
+for col, opts in (("T", '"있음,없음,모름"'), ("W", '"있음,없음,모름"'), ("X", '"맞음,안 맞음,모름"'), ("Y", '"예,아니오,모름"')):
+    dv = DataValidation(type="list", formula1=opts, allow_blank=True); ws.add_data_validation(dv); dv.add(f"{col}{X1}:{col}{XL}")
+# 요약 (수식)
+SM = XL + 3
+ws.cell(SM - 1, 1, "요약 — 위 12개 영상 기준 (수식)").font = TITLE
+head_row(ws, SM, ["게임", "영상 수", "평균 길이 (초)", "세로형 수", "정사각형 수", "가로형 수", "위기·실패 장면 있음",
+                  "실사 사람·손 있음", "평균 큰 장면 전환 수", "엔드카드 있음"])
+rg = lambda col: f"${col}${X1}:${col}${XL}"
+for k, g in enumerate(GAMES3 + ["전체"]):
+    i = SM + 1 + k
+    crit = f'$A{i}' if g != "전체" else '"*"'
+    put(ws, i, [g, f"=COUNTIF({rg('A')},{crit})", f"=ROUND(AVERAGEIF({rg('A')},{crit},{rg('C')}),1)",
+                f'=COUNTIFS({rg("A")},{crit},{rg("F")},"세로형*")', f'=COUNTIFS({rg("A")},{crit},{rg("F")},"정사각형*")',
+                f'=COUNTIFS({rg("A")},{crit},{rg("F")},"가로형*")', f'=COUNTIFS({rg("A")},{crit},{rg("H")},"있음")',
+                f'=COUNTIFS({rg("A")},{crit},{rg("N")},"있음*")', f"=ROUND(AVERAGEIF({rg('A')},{crit},{rg('O')}),1)",
+                f'=COUNTIFS({rg("A")},{crit},{rg("Q")},"예")'])
+    ws.cell(i, 1).font = BB
+    for c in range(2, 11): ws.cell(i, c).alignment = Alignment(horizontal="center")
+notes35 = [
+ "고른 기준: 3-3 ⑤의 처음 3초 유형이 겹치지 않게 게임별 4개 (Royal Match: 선택지·실사 손·3D 연출·위기 / MONOPOLY GO!: 실사 배우·캐릭터 2개·IP / Magic Sort!: 실사 도전·플레이 2개·3D 연출).",
+ "'도파민 요소'는 뇌 반응을 잰 것이 아니라 화면에 보이는 보상·긴장·만족감 연출을 센 것(분석자 판독). '샘플에서 안 보임'은 없다는 뜻이 아니라 캡처한 12장에 없었다는 뜻.",
+ "큰 장면 전환 수: 연속한 캡처 2장 사이에 장소·화면이 확 바뀐 횟수(엔드카드로 바뀜 포함). 캡처 간격이 1~5초라 실제 컷 수보다 적게 셀 수 있음.",
+ "사운드: 이 판독 방식(화면 캡처)으로는 소리를 들을 수 없음 → T~Y열은 사용자가 메타 광고 라이브러리에서 B열 ID로 영상을 열어 듣고 고르는 칸.",
+ "실제 광고 성과(조회·설치·광고비): 비공개. 대신 쓸 수 있는 공개 지표: 집행 일수(3-3 ④), 같은 영상 재사용(3-3 ⑤ F열).",
+ "출처: Meta 광고 라이브러리 (https://www.facebook.com/ads/library/?id=광고 ID), 2026-10-05 조회. 일부 광고는 유럽 대상(이탈리아어·독일어 문구).",
+]
+for k, t in enumerate(notes35):
+    ws.cell(SM + 6 + k, 1, t).font = NOTE
+widths35 = [14, 18, 9, 8, 8, 12, 26, 9, 30, 14, 18, 14, 16, 10, 10, 22, 9, 26, 24, 11, 14, 16, 12, 12, 12]
+for idx, w in enumerate(widths35, start=1):
+    ws.column_dimensions[get_column_letter(idx)].width = w
+ws.row_dimensions[HR].height = 48
+ws.freeze_panes = "C5"
+
+# ---------- (10) 광고 MVP 구성표 (분석자 제안) ----------
+ws = wb.create_sheet("광고 MVP 구성표")
+ws["A1"] = "광고 MVP 구성표 — 우리 Magic Sort!형 정렬 퍼즐용 15초·30초 광고 (모두 분석자 제안, 근거는 3-3·3-5)"; ws["A1"].font = TITLE
+ws["A2"] = "광고 MVP = 광고 한 편에 꼭 있어야 할 최소 구성. 노란 칸 = 분석자 제안. 숫자 근거는 3-5에서 수식으로 가져옴"; ws["A2"].font = NOTE
+SH = "'광고 소재 해부'!"
+facts = [
+ ("12개 중 엔드카드가 있는 영상", f'=COUNTIF({SH}$Q${X1}:$Q${XL},"예")&" / "&COUNTA({SH}$A${X1}:$A${XL})', "3-5 Q열"),
+ ("12개 중 세로형 영상", f'=COUNTIF({SH}$F${X1}:$F${XL},"세로형*")&" / "&COUNTA({SH}$A${X1}:$A${XL})', "3-5 F열"),
+ ("Magic Sort! 4개 평균 길이 (초)", f'=ROUND(AVERAGEIF({SH}$A${X1}:$A${XL},"Magic Sort!",{SH}$C${X1}:$C${XL}),1)', "3-5 C열"),
+ ("Royal Match 4개 중 위기·실패 장면", f'=COUNTIFS({SH}$A${X1}:$A${XL},"Royal Match",{SH}$H${X1}:$H${XL},"있음")&" / 4"', "3-5 H열"),
+ ("Magic Sort! 4개 평균 큰 장면 전환 수", f'=ROUND(AVERAGEIF({SH}$A${X1}:$A${XL},"Magic Sort!",{SH}$O${X1}:$O${XL}),1)', "3-5 O열"),
+]
+head_row(ws, 4, ["근거 숫자", "값 (수식)", "어디서"])
+for k, (a, f_, src) in enumerate(facts):
+    put(ws, 5 + k, [a, f_, src]); ws.cell(5 + k, 2).alignment = Alignment(horizontal="center")
+TB = 5 + len(facts) + 3
+ws.cell(TB - 1, 1, "① 구간별 구성 (분석자 제안)").font = TITLE
+head_row(ws, TB, ["구간", "15초 버전", "30초 버전", "화면에 보여 줄 것", "도파민 장치 (보상·긴장)", "영상 효과",
+                  "사운드 (제안 — 3-5 사운드 기입 뒤 확정)", "2인 팀 제작 난이도", "근거"])
+segs = [
+ ("① 후킹", "0~3초", "0~3초", "거의 다 푼 판 + 'Only 1%만 풀 수 있다' 같은 도전 문구 (또는 실물 퍼즐 도전 장면)",
+  "도전 문구로 궁금증 + '나도 할 수 있나?'", "첫 장면부터 게임 화면, 글자는 크게 한 줄", "첫 0.5초 안에 소리 시작 (제안)",
+  "쉬움 (도전 장면은 보통)", "3-3 ②·⑤ Magic Sort! 호기심형, 3-5 Magic Sort! 실사 도전"),
+ ("② 핵심 놀이", "3~8초", "3~15초", "손가락 아이콘이 병을 옮기는 실제 플레이, 한 장면 유지",
+  "단색 병이 하나씩 완성되는 진행감", "손가락 아이콘, 붓는 애니메이션", "붓는 소리 (제안)",
+  "쉬움 (화면 녹화)", "3-5 Magic Sort! 플레이 영상 2개 (장면 전환 0~1)"),
+ ("③ 긴장 → 해소", "8~12초", "15~25초", "마지막 한 칸 남기고 막힘 → 다시 풀어 성공 (일부러 틀리기 1번)",
+  "아슬아슬함 + 해소 / '내가 하면 더 잘할 텐데'", "막혔을 때 화면 살짝 흔들기 (제안)", "실패 '삐' + 성공 '딩' (제안)",
+  "보통 (연출 편집 필요)", "3-5 Royal Match 핀 퍼즐 실패 장면(10초), Magic Sort! 3D 깨짐 연출"),
+ ("④ 보상", "12초 무렵", "25초 무렵", "판 완성 + 반짝임 + 별·숫자", "숫자 보상 팝업", "반짝이는 입자, 숫자 팝업",
+  "완성 효과음 (제안)", "쉬움", "3-5 MONOPOLY GO! 숫자 보상('7,500', '+150K')"),
+ ("⑤ 엔드카드", "12~15초", "25~30초", "게임 로고 + 실제 게임 화면 + 'Play Now' 버튼", "—", "버튼이 살짝 커졌다 작아짐 (제안)",
+  "로고 소리 (제안)", "쉬움", "3-5 엔드카드 있음 (위 근거 숫자)"),
+]
+for k, s in enumerate(segs):
+    i = TB + 1 + k
+    put(ws, i, list(s), wrap=True)
+    ws.cell(i, 1).font = BB
+    for c in range(2, 9): ws.cell(i, c).fill = YEL
+RB_ = TB + len(segs) + 3
+ws.cell(RB_ - 1, 1, "② 기본 규칙 (분석자 제안)").font = TITLE
+rules = [
+ "화면 비율: 세로형(9:16)을 기본으로, 정사각형(1:1)을 하나 더 — 3-5에서 세로형·정사각형이 대부분.",
+ "길이: 큰 회사는 60초 가까이 쓰지만(3-5 Royal Match), 2인 팀은 15초·30초 두 가지로 시작. 길이별 광고 성과 공개 자료는 확인 불가.",
+ "실제 게임에 없는 장면은 쓰지 않기: 3-5에서 실제 게임과 다른 3D 연출이 있었음 — 우리 광고는 실제 화면 위주로(스토어·광고 정책 위험을 피하려는 분석자 판단).",
+ "소재 테스트: 3-4 ② 소재 A~E 중 D(게임 화면)·A(호기심)·B(직접 제안)를 위 구성으로 각각 만들어 같은 예산으로 비교.",
+ "사운드 칸은 3-5 T~Y열을 직접 듣고 채운 뒤 확정 — 지금은 제안만.",
+]
+for k, t in enumerate(rules):
+    c = ws.cell(RB_ + k, 1, t); c.font = B; c.fill = YEL
+for col, w in zip("ABCDEFGHI", [34, 14, 14, 40, 30, 28, 30, 18, 40]):
+    ws.column_dimensions[col].width = w
+ws.freeze_panes = "A4"
+
 # ---------- (4) 개요 맨 아래 2줄 추가 ----------
 g = wb["개요"]
 nr = g.max_row + 1
 for k, (a, b_) in enumerate([
     ("6단계-3 출처 (2026-10-05 조회)", "2인 개발 MVP 판단: 3-2 매출 Top100·3-3 매출-다운로드 비교·1-2 Google Play Top100(모두 2026-10-04)을 게임전략 파일에 참조용 복사본으로 두고 수식으로 사용 + 세부 장르 점수는 분석자 판단. 광고 대비 유입: CPI — Adjust 'The gaming app insights report: 2026 edition' p.28~29(2024-01~2026-01), Liftoff·Singular '2025 Casual Gaming Apps Report'(2024-02~2025-02), 2차 인용 3건(Statista·Mistplay·GameDev Reports, 노란 칸). 리텐션 — GameAnalytics 2026 지역 표(4-2 / 게임전략 4-1 참조)."),
-    ("6단계-3 한계", "세부 장르 점수·2인 역할·MVP 기간은 분석자 판단/추정(근거 수치 없음). '지역×OS×장르'를 모두 나눈 CPI는 확인 불가. 광고 채널 분석(3-2)의 채널별 게임 CPI는 확인 불가. 후킹 영상(3-3)은 AdWhispr 분류(게임당 25개 표본) + 영상 30개 처음 3초 분석자 판독(화면 캡처 2~3장 기준). 마케팅 실행안(3-4)은 전부 분석자 제안.")]):
+    ("6단계-3 한계", "세부 장르 점수·2인 역할·MVP 기간은 분석자 판단/추정(근거 수치 없음). '지역×OS×장르'를 모두 나눈 CPI는 확인 불가. 광고 채널 분석(3-2)의 채널별 게임 CPI는 확인 불가. 후킹 영상(3-3)은 AdWhispr 분류(게임당 25개 표본) + 영상 30개 처음 3초 분석자 판독(화면 캡처 2~3장 기준). 마케팅 실행안(3-4)·광고 MVP 구성표(3-6)는 전부 분석자 제안. 광고 소재 해부(3-5)는 영상 12개를 화면 캡처 12장씩으로 판독했고 사운드는 사용자 기입 칸.")]):
+    g.cell(nr + k, 1, a).font = BB; g.cell(nr + k, 1).border = BD
+    c = g.cell(nr + k, 2, b_); c.font = B; c.border = BD; c.alignment = Alignment(wrap_text=True, vertical="top")
+
+# ===================== 6단계-4: 남은 빈칸 채우기 (2026-10-07 조회) =====================
+# 사용자 승인: ① App Store 매출 Top100 새 시트 ② 3-3 ①·②·③ 유형 55개의 공식 설치 구간·출시일을 '미조사' 칸에 채움
+# ③ '확인 필요' 칸은 재검토 표만 만들고 원래 칸은 그대로 ④ 2-6 표 B·C·동남아 4개국은 찾지 못해 그대로
+SRC_AB_IOS_GROSS = "AppBrain App Store Top Grossing Games United States https://www.appbrain.com/stats/appstore-rankings/top_grossing/games/us"
+GREEN = PatternFill("solid", fgColor="E2EFDA")
+
+# ---------- (1) 3-3 매출-다운로드 비교: F·G열 채우기 ----------
+inst64 = """MONOPOLY GO!|100,000,000+|2022-12|com.scopely.monopolygo
+Roblox|1,000,000,000+|2014-06|com.roblox.client
+Candy Crush Saga|1,000,000,000+|2012-11|com.king.candycrushsaga
+Royal Match|100,000,000+|2020-07|com.dreamgames.royalmatch
+Gossip Harbor: Merge & Story|50,000,000+|2022-09|com.mergegames.gossipharbor
+Township|500,000,000+|2013-11|com.playrix.township
+Coin Master|100,000,000+|2016-01|com.moonactive.coinmaster
+Royal Kingdom|100,000,000+|2023-03|com.dreamgames.royalkingdom
+Whiteout Survival|100,000,000+|2023-01|com.gof.global
+Pokémon GO|500,000,000+|2016-07|com.nianticlabs.pokemongo
+Last War:Survival Game|100,000,000+|2023-06|com.fun.lastwar.gp
+DRAGON BALL Z DOKKAN BATTLE|50,000,000+|2015-07|com.bandainamcogames.dbzdokkanww
+Toon Blast|100,000,000+|2017-03|net.peakgames.toonblast
+Total Battle: War Strategy|50,000,000+|2017-10|com.totalbattle
+Last Z: Survival Shooter|10,000,000+|2023-12|com.readygo.barrel.gp
+Evony: The King's Return|100,000,000+|2016-04|com.topgamesinc.evony
+RAID: Shadow Legends|50,000,000+|2018-07|com.plarium.raidlegends
+Gardenscapes|500,000,000+|2016-07|com.playrix.gardenscapes
+Dice Dreams|50,000,000+|2019-09|com.superplaystudios.dicedreams
+Jackpot Party Casino Slots|10,000,000+|2013-06|com.williamsinteractive.jackpotparty
+Last Asylum: Plague|10,000,000+|2026-02|com.phs.global
+Fishdom|100,000,000+|2016-02|com.playrix.fishdomdd.gplay
+Cashman Casino Slots Games|10,000,000+|2016-10|com.productmadness.cashmancasino
+Match Factory!|10,000,000+|2023-12|net.peakgames.match
+Bingo Blitz - Bingo Games|50,000,000+|2012-09|air.com.buffalo_studios.newflashbingo
+Free Fire x NARUTO SHIPPUDEN|1,000,000,000+|2017-09|com.dts.freefireth
+Pokémon TCG Pocket|50,000,000+|2024-09|jp.pokemon.pokemontcgp
+Tasty Travels: Merge Game|10,000,000+|2023-12|com.fatmerge.global
+Magic Sort!|10,000,000+|2024-06|com.grandgames.magicsort
+Cube Land Puzzle Game|1,000,000+|2026-01|com.rotatelab.cubeblast
+Colony Flow!|1,000,000+|2026-06|com.abi.colony.flow
+Royal Smash! - Physics Puzzle|10,000,000+|2026-06|com.cyphergames.royalsmash
+Loop Sort|1,000,000+|2025-09|com.Garawell.LoopSort
+Angry Birds 2|100,000,000+|2015-07|com.rovio.baba
+Rotate Rings|1,000,000+|2026-07|com.nebula.rotaterings
+Meowdoku: Brain Puzzle Games|10,000,000+|2026-04|com.oakever.meowdoku
+Vita Mahjong|100,000,000+|2024-01|com.vitastudio.mahjong
+Smash Land!|1,000,000+|2026-08|com.flow.smashparty
+Block Blast!|1,000,000,000+|2022-09|com.block.juggle
+Bus Fever Party!|10,000,000+|2025-04|gridplus.busjam.carpuzzle
+MemeMix Challenge: Funny Party|1,000,000+ (GP)|2026-09|com.mimik.challenge.fun
+Brain Puzzle 3: Crazy Mind|10,000,000+|2025-12|com.brain.crazy.joygame
+Woodoku Blast|10,000,000+|2024-10|com.tripledot.blockbash
+Amaze GO!|100,000,000+|2026-02|com.oakever.arrows
+Block Craft 3D: Building Game|500,000,000+|2016-08|com.fungames.blockcraft
+Word Search Explorer|100,000,000+|2021-11|in.playsimple.wordsearch
+Fish Sort Puzzle|1,000,000+|2026-03|triple.sorting.bubble.fish.match
+Mahjong Blast|50,000,000+|2025-06|com.nebula.mahjongtile
+Pocket Sort: Coin Merge Puzzle|10,000,000+|2025-09|com.pocket.sort.coin.puzzle.game
+Arrow Puzzle: Tap Puzzle Games|50,000,000+|2025-11|com.easybrain.arrow.puzzle.game
+Fortnite|10,000,000+|2020-04|com.epicgames.fortnite
+Castle Busters|10,000,000+|2025-07|com.epicoro.castleclashers
+Mob Control|100,000,000+|2021-05|com.vincentb.MobControl
+Bulldozer Master: Crush & Mine|1,000,000+|2025-04|io.supercent.bulldozermasters
+Clash of Clans|500,000,000+|2013-09|com.supercell.clashofclans
+Candy Crush Soda Saga|500,000,000+|2014-06|com.king.candycrushsodasaga
+Lightning Link Casino Slots|10,000,000+|2018-08|com.productmadness.lightninglink
+Sword x Staff|1,000,000+|2026-05|com.zjcs.android.us
+Pixel Flow!|10,000,000+|2025-10|com.loomgames.pixelflow
+Lotsa Slots - Casino Games|10,000,000+|2017-10|com.diamondlife.slots.vegas.free
+Homescapes|500,000,000+|2017-08|com.playrix.homescapes
+Dark War Survival|10,000,000+|2023-12|com.readygo.dark.gp
+Yarn Loop|1,000,000+|2025-12|com.combo.yarnflow
+Honkai: Star Rail|10,000,000+|2023-04|com.HoYoverse.hkrpgoversea
+Solitaire Grand Harvest|50,000,000+|2017-06|net.supertreat.solitaire
+Wuthering Waves|10,000,000+|2024-05|com.kurogame.wutheringwaves.global
+Disney Solitaire|10,000,000+|2025-02|com.superplaystudios.disneysolitairedreams
+Coin Master - Board Adventure|5,000,000+|2025-08|com.moonactive.cmboard
+Mystery Town: Merge Games|5,000,000+|2024-10|com.cedargames.mysterytown
+Cash Frenzy - Casino Slots|10,000,000+|2019-01|slots.pcg.casino.games.free.android
+Puzzles & Survival|10,000,000+|2020-09|com.global.ztmslg
+All in Hole: Black Hole Games|10,000,000+|2023-06|com.homagames.studio.allinhole
+Z Route: Redemption|5,000,000+|2026-02|com.zroute.global
+Slots: Heart of Vegas Casino|10,000,000+|2015-07|com.productmadness.hovmobile
+Flambé: Merge & Cook|5,000,000+|2024-12|com.cola.game
+Merge Cooking|10,000,000+|2022-09|com.merge.cooking.theme.restaurant.food
+Matching Story - Puzzle Games|10,000,000+|2021-05|com.joycastle.mergematch
+Hay Day|100,000,000+|2013-11|com.supercell.hayday
+June's Journey: Hidden Objects|50,000,000+|2017-03|net.wooga.junes_journey_hidden_object_mystery_game
+Magic: The Gathering Arena|5,000,000+|2021-03|com.wizards.mtga
+Quick Hit Casino Slots Games|10,000,000+|2015-03|com.ballytechnologies.quickhitslots
+Travel Town - Merge Adventure|10,000,000+|2021-03|io.randomco.travel
+PUBG MOBILE|1,000,000,000+|2018-03|com.tencent.ig
+Puzzles & Chaos: Frozen Castle|10,000,000+|2022-12|com.global.pnck
+GODDESS OF VICTORY: NIKKE|10,000,000+|2022-10|com.proximabeta.nikke
+Bingo Voyage - Live Bingo Game|5,000,000+|2023-06|com.bingo.cruise.free.best.top.game
+Brawl Stars|500,000,000+|2018-06|com.supercell.brawlstars
+Lordrush|1,000,000+|2026-07|com.s01.global
+eFootball|100,000,000+|2017-05|jp.konami.pesam
+Minecraft: Dream it, Build it!|50,000,000+|2011-10|com.mojang.minecraftpe
+Hollywood Merge|5,000,000+|2026-01|com.hollywood.merge
+Piggy Kingdom|1,000,000+|2023-07|com.olleyo.piggy.king.free
+MARVEL Strike Force: Squad RPG|50,000,000+|2018-01|com.foxnextgames.m3
+Golf Clash - Golfing Simulator|10,000,000+|2016-10|com.playdemic.golf.android
+Bingo Frenzy-Live Bingo Games|10,000,000+|2018-12|com.cooking.bingo.ldkwh
+Clash of Critters|5,000,000+|2024-12|com.farlightgames.pgame.gp
+WSOP Poker: Texas Holdem Game|50,000,000+|2013-11|com.playtika.wsop.gp
+Toy Blast|100,000,000+|2014-10|net.peakgames.amy
+Jackpot World - Slots Casino|10,000,000+|2018-05|com.grandegames.slots.dafu.casino
+Hole Stars: Puzzle Game|5,000,000+|2025-09|com.moonactive.holestars
+Hunting Sniper|5,000,000+|2023-07|com.online.huntingsniper
+Color Block Jam|10,000,000+|2024-11|com.GybeGames.ColorBlockJam
+Tiki Solitaire TriPeaks|10,000,000+|2013-08|com.gsn.android.tripeaks
+Yahtzee With Buddies: Dice|10,000,000+|2017-06|com.scopely.yux
+Hero Wars: Alliance RPG Legend|100,000,000+|2017-02|com.nexters.herowars
+Police Chief|1,000,000+|2026-01|com.slg.policewar
+Bus Traffic Fever!|10,000,000+|2026-02|jp.co.goodroid.hyper.busflow
+Rise of Kingdoms: Lost Crusade|50,000,000+|2018-04|com.lilithgame.roc.gp
+Solitaire Associations Journey|10,000,000+|2025-08|com.hitappsgames.wordsolitaire
+Seaside Escape: Merge & Story|10,000,000+|2022-09|com.gamedots.seasideescape
+Clash Royale|500,000,000+|2016-02|com.supercell.clashroyale
+Match Masters|50,000,000+|2017-05|com.funtomic.matchmasters
+CubeAway - 3DPuzzle|5,000,000+|2026-02|jp.co.goodroid.hyper.puzzle.arrows3dcubepuzzle
+Paper.io 2|100,000,000+|2018-09|io.voodoo.paper2
+Magic Tiles 3 - Piano Game|500,000,000+|2017-02|com.youmusic.magictiles
+Arrows – Puzzle Escape|100,000,000+|2025-07|com.ecffri.arrows
+8 Ball Pool|1,000,000,000+|2013-01|com.miniclip.eightballpool
+Sled Surfers|10,000,000+|2025-05|com.sled.surfers.game
+Jigsawcard Solitaire Puzzle|10,000,000+|2025-11|com.oakever.jigsawcard
+Color by Number: Coloring Games|100,000,000+|2017-12|com.tfgco.apps.coloring.free.color.by.number
+Warline: Sniper Strike|5,000,000+|2025-07|com.farlightgames.warline.gp.global
+Color Block: Combo Blast|50,000,000+|2019-04|com.puzzlegames.puzzlebrickslegend
+Brainy Escape Quest|10,000,000+|2025-05|com.metagame.annoying.trick.brainypuzzle
+CarLoop|500,000+|2026-04|com.blast.puzzlegame.bear
+Solitaire - Classic Card Games|50,000,000+|2021-04|solitaire.patience.card.games.klondike.free
+Slow Mo Strike: Knives in Time|5,000,000+|2026-05|com.kayac.slow_mo_strike
+Idle Cat Gunner: Shooter RPG|1,000,000+|2026-04|com.Chodun.CatGunner
+Subway Surfers|1,000,000,000+|2012-09|com.kiloo.subwaysurf
+Word Tiles - Relaxing Puzzle|100,000+|2026-07|com.agavegames.wordtiles
+Geometry Dash Lite|500,000,000+|2013-09|com.robtopx.geometryjumplite
+Mahjong Master: Daily Match|10,000,000+|2026-01|com.mahjong.master.solitaire.match.puzzle
+Search It - Hidden Objects|5,000,000+|2026-01|com.leap.searchit
+Happy Color: Color by Number|100,000,000+|2018-01|com.pixel.art.coloring.color.number
+Apex Sniper: Animal Hunt|1,000,000+|2026-07|com.animal.hunter.shooting.apex
+Toca Boca World|100,000,000+|2018-09|com.tocaboca.tocalifeworld
+Among Us|500,000,000+|2018-06|com.innersloth.spacemafia
+Ball Sort Puzzle - Color Game|50,000,000+|2022-05|ball.sort.puzzle.color.sorting.bubble.games
+EA SPORTS FC Soccer Mobile 27|500,000,000+|2016-09|com.ea.gp.fifamobile
+Hidden Object Games: Seek It|10,000,000+|2025-07|hidden.object.find.seek.search.mystery.puzzle.games.free
+Aniimo|1,000,000+ (GP)|2026-09|com.x.aniimos
+Tiki Smash!|100,000+ (GP)|?|com.thrivegames.bashbest
+Word Connect Association|1,000,000+|2025-07|in.playsimple.wordtrip.association
+Melon Sandbox|100,000,000+|2022-12|com.studio27.MelonPlayground
+Double Tile!|10,000,000+|2025-10|com.hungrystudio.mahjong
+Brain Puzzle 2: Logic Twist|10,000,000+|2025-05|com.brain.logic.joygame
+Frost Valley: Merge & Story|10,000,000+|2025-11|com.liteorange.hometopia
+Solitaire|10,000,000+|2017-01|com.smilerlee.klondike
+Food Hunt: Pixel Puzzle|1,000,000+|2026-05|com.vigafun.funfinity.foodhunt
+Angry Smash|500,000+|2026-07|com.tripledot.angrysmash
+Car Evolve|1,000,000+|2026-03|io.heseri.car
+Freddy Playground Sandbox|100,000+|2026-08|com.freddys.playground.sandbox
+Solar Smash|100,000,000+|2020-01|com.paradyme.solarsmash
+GOGO! Blast|1,000,000+|2026-04|com.nebula.arrows
+Annoying Uncle Punch Game|100,000,000+|2024-08|com.gtsy.annoying.punch.game
+Food Sort: Puzzle Game|1,000,000+|2025-09|com.triple.food.sort.puzzle.game
+Fast Cash Farkle|50,000+|2026-08|com.greatplay.farklecash
+Star Wars: Galaxy of Heroes|50,000,000+|2015-09|com.ea.game.starwarscapital_row
+Fate/Grand Order (English)|5,000,000+|2017-06|com.aniplex.fategrandorder.en
+Star Trek Fleet Command|10,000,000+|2018-09|com.scopely.startrek
+Genshin Impact 6th Anniversary|100,000,000+|2020-08|com.miHoYo.GenshinImpact
+Yalla Ludo - Ludo&Jackaroo|100,000,000+|2018-09|com.yalla.yallagames
+Bloons Blitz|100,000+|2026-08|com.ninjakiwi.bloonsblitz
+Screw Out 3D: Nut Sort Jam|1,000,000+|2025-08|net.happywit.screw.out.jam
+Loop Master: Color Jam Sort|1,000,000+|2026-05|com.loop.clear.cube.free.card.puzzle.sort.match
+Wordscapes Search: Word Games|10,000,000+|2019-08|com.peoplefun.wordsearch
+Block Crush!|50,000,000+|2021-12|com.wood.block.sudoku.puzzle.bm
+Crossword Go!|1,000,000+|2025-04|in.playsimple.crossword.go
+Offline Games - No Wifi Games|100,000,000+|2023-08|com.JindoBlu.OfflineGames
+Last Extract|1,000,000+|2026-05|com.xiaomo.lastextract
+Vigor Mahjong|5,000,000+|2024-06|com.godlike.vigormahjong
+Treasure Master|10,000,000+|2021-11|com.gimica.treasuremaster"""
+ws = wb["매출-다운로드 비교"]
+filled = {}
+for line in inst64.split("\n"):
+    name, rng, since, pkg = line.split("|")
+    filled[name] = (rng, since, pkg)
+CONFLICT = {  # 2026년 출시 게임 10개를 Google Play 상세 페이지에서 직접 대조 → 다른 3개 (AppBrain 값을 쓰고 노란 칸)
+    "Amaze GO!": "Google Play 페이지에서 직접 읽으면 '50M+' → 출처끼리 다름 (노란 칸)",
+    "Royal Smash! - Physics Puzzle": "Google Play 페이지에서 직접 읽으면 '5M+' → 출처끼리 다름 (노란 칸)",
+    "Smash Land!": "Google Play 페이지에서 직접 읽으면 '100K+'~'500K+'(읽을 때마다 다름) → 출처끼리 다름 (노란 칸)",
+}
+done = 0
+for r in range(6, ws.max_row + 1):
+    name = ws.cell(r, 1).value
+    if name in filled and ws.cell(r, 6).value == "미조사":
+        rng, since, pkg = filled[name]
+        gp_only = rng.endswith(" (GP)")
+        rng = rng.replace(" (GP)", "")
+        ws.cell(r, 6).value = rng
+        ws.cell(r, 7).value = f"{since} (Google Play 등록 월)" if since != "?" else "확인 불가"
+        for c in (6, 7): ws.cell(r, c).fill = PatternFill(fill_type=None)   # Kingshot 줄과 같은 모양
+        if since == "?": ws.cell(r, 7).fill = YEL
+        assert ws.cell(r, 9).value in (None, "")
+        if gp_only:
+            ws.cell(r, 9).value = (f"공식 설치 구간: Google Play 상세 https://play.google.com/store/apps/details?id={pkg} (2026-10-07 조회, AppBrain 페이지에 표시 없음/0+) · "
+                                   f"등록 월: AppBrain 앱 상세 https://www.appbrain.com/app/{pkg}")
+        else:
+            ws.cell(r, 9).value = f"AppBrain 앱 상세 https://www.appbrain.com/app/{pkg} (2026-10-07 조회)"
+        ws.cell(r, 9).font = B
+        if name in CONFLICT:
+            ws.cell(r, 6).fill = YEL
+            ws.cell(r, 9).value += " — " + CONFLICT[name]
+        done += 1
+assert done == 171, done
+n33b = ["6단계-4 (2026-10-07 조회): 172개 전부의 F·G열을 채움(Kingshot 포함). F열 = AppBrain 앱 상세 페이지에 옮겨 적힌 Google Play 다운로드 표시(예: '100,000,000+ Downloads'), "
+        "G열 = 같은 페이지의 'available on Google Play since <월>' 문장. 링크는 I열. AppBrain에 표시가 없거나 '0+'인 3개(MemeMix·Aniimo·Tiki Smash!)는 Google Play 페이지에서 직접 확인.",
+        "위 'Kingshot 1개만 확인' 줄은 6단계-2 당시 메모라 그대로 둠. 공식 구간은 '이 숫자 이상'이라는 뜻이라 실제 다운로드 수는 여전히 비공개. 2026년 출시 게임 10개를 Google Play에서 직접 대조해 3개가 달라 노란 칸으로 표시(AppBrain 옮겨 적기가 늦을 수 있음)."]
+for k, t in enumerate(n33b):
+    c = ws.cell(H0 + 7 + 6 + k, 11, t); c.font = NOTE
+
+# ---------- (1-2) '확인 필요' 칸 반영 — 같은 부류끼리 묶어서 (사용자 승인, 2026-10-07) ----------
+# 묶음 A 확인됨→노란색 해제 / B 대분류 확정 / C 퍼블리셔 / D 같은 방식·같은 회사 게임과 기준 맞춤 / E 스토어 분류만 확인(노란색 유지) / F 사실만 덧붙임
+NOFILL = PatternFill(fill_type=None)
+def fix(sn, r, vals, clear=None):
+    ws_ = wb[sn]
+    for col, v in vals.items():
+        ws_[f"{col}{r}"].value = v
+    if clear:
+        for c in range(clear[0], clear[1] + 1): ws_.cell(r, c).fill = NOFILL
+T = " (6단계-4)"
+APPLY = [  # (묶음, 시트, 행, {열: 새 값}, 노란색 해제 범위 또는 None)
+ ("A", "Google Play Top100", 11, {"F": "AI 음성 파티 게임 확인" + T}, (1, 6)),
+ ("A", "Google Play Top100", 46, {"F": "색 블록 정렬 퍼즐 확인" + T}, (1, 6)),
+ ("A", "매출 Top100", 40, {"F": "색 정렬 퍼즐 확인" + T}, (1, 6)),
+ ("A", "매출 Top100", 45, {"F": "주사위 보드 게임 확인" + T}, (1, 6)),
+ ("A", "매출 Top100", 73, {"F": "머지 + 스토리 확인" + T}, (1, 6)),
+ ("A", "매출 Top100", 49, {"F": "블랙홀 io 게임 확인 (스토어 분류는 Puzzle)" + T}, (1, 6)),
+ ("A", "App Store Top100", 69, {"F": "농구 라인업 짜기 게임 확인 (스토어 분류 Sports)" + T}, (1, 6)),
+ ("A", "동남아 분석", 7, {"I": "리듬 게임 확인 (스토어 분류 음악)" + T}, (1, 9)),
+ ("B", "국가별 Top20", 82, {"G": "전략"}, (1, 8)),
+ ("B", "국가별 Top20", 94, {"G": "전략"}, (1, 8)),
+ ("B", "동남아 분석", 13, {"G": "퍼즐", "I": "물 정렬 퍼즐 확인 (세부: 정렬·잼)" + T}, (1, 9)),
+ ("C", "App Store Top100", 100, {"C": "Sven Vucak", "F": "퍼블리셔 확인 (App Store 판매자)" + T}, (1, 6)),
+ ("D", "App Store Top100", 6, {"E": "픽셀·컬러 아트", "F": "픽셀 그림 + 색 슬롯 방식 확인 — Pixel Flow!와 같은 부류로 맞춤" + T}, (1, 6)),
+ ("D", "Google Play Top100", 22, {"E": "픽셀·컬러 아트", "F": "픽셀 그림 + 색 슬롯 방식 확인 — Pixel Flow!와 같은 부류로 맞춤" + T}, (1, 6)),
+ ("D", "매출 Top100", 67, {"E": "픽셀·컬러 아트", "F": "픽셀 그림 + 색 슬롯 방식 확인 — Pixel Flow!와 같은 부류로 맞춤" + T}, (1, 6)),
+ ("D", "Google Play Top100", 88, {"F": "스토어 분류 Strategy 확인 — 같은 회사 Kingshot과 같은 기준으로 4X·SLG (세부는 분석자 판단)" + T}, None),
+ ("D", "매출 Top100", 69, {"F": "스토어 분류 Strategy 확인 — 같은 회사 Kingshot과 같은 기준으로 4X·SLG (세부는 분석자 판단)" + T}, None),
+ ("D", "App Store Top100", 72, {"F": "탄막 생존 게임 확인 — 아케이드 유지 (분석자 판단)" + T}, None),
+ ("D", "Google Play Top100", 101, {"F": "탄막 생존 게임 확인 — 아케이드 유지 (분석자 판단)" + T}, None),
+ ("E", "매출 Top100", 24, {"F": "스토어 분류 Strategy 확인, 세부(4X·SLG)는 분석자 판단" + T}, None),
+ ("E", "매출 Top100", 50, {"F": "스토어 분류 Strategy 확인, 세부(4X·SLG)는 분석자 판단" + T}, None),
+ ("E", "매출 Top100", 91, {"F": "스토어 분류 Strategy 확인, 세부(4X·SLG)는 분석자 판단 · 경영 성격도 있음" + T}, None),
+ ("E", "매출 Top100", 35, {"F": "스토어 분류 RPG 확인, '방치형'은 확인 안 됨" + T}, None),
+ ("E", "매출 Top100", 54, {"F": "매치3·타일·머지 혼합형 (스토어 분류 Casual)" + T}, None),
+ ("E", "App Store Top100", 28, {"F": "실물 카드 뽑기·출금 가능(2차 출처) — 리얼머니 성격" + T}, None),
+ ("F", "동남아 분석", 10, {"I": "확인 필요 — 게임 방식 확인 안 됨 · 리뷰에 '현금 보상' 주장 있음(검증 불가)" + T}, None),
+ ("F", "동남아 분석", 62, {"C": "부분 확인 — 888XHSukari는 4x4 스도쿠, 888XHPearl은 타이밍 탭 게임(스토어 설명). 이름 규칙의 이유는 확인 안 됨" + T}, None),
+]
+for grp, sn, r, vals, clr in APPLY:
+    fix(sn, r, vals, clr)
+
+# ---------- (2) App Store 매출 Top100 (새 시트) ----------
+ios_g = """1|Roblox|Roblox Corporation|기타(UGC·리워드)|UGC 플랫폼|1-1에 있는 분류 그대로|Roblox|
+2|Royal Match|Dream Games|퍼즐|매치3|1-1에 있는 분류 그대로|Royal Match|
+3|MONOPOLY GO!|Scopely, Inc.|카드·보드·카지노|보드·주사위 소셜캐주얼|1-1에 있는 분류 그대로|MONOPOLY GO!|
+4|Gossip Harbor®: Merge & Story|Microfun Limited|퍼즐|머지|1-1에 있는 분류 그대로|Gossip Harbor: Merge & Story|
+5|Candy Crush Saga|King|퍼즐|매치3|1-1에 있는 분류 그대로|Candy Crush Saga|
+6|Kingshot|Century Games Pte. Ltd.|전략|4X·SLG|1-1에 있는 분류 그대로|Kingshot|
+7|Whiteout Survival|Century Games Pte. Ltd.|전략|4X·SLG|1-1에 있는 분류 그대로|Whiteout Survival|
+8|Pokémon GO|Scopely Explore, Inc.|RPG|위치기반 수집|1-1에 있는 분류 그대로|Pokémon GO|
+9|Toon Blast|Peak Games|퍼즐|매치3|1-1에 있는 분류 그대로|Toon Blast|
+10|Last War:Survival|FUNFLY PTE. LTD.|전략|4X·SLG|3-2에 있는 분류 그대로|Last War:Survival Game|
+11|Clash Royale|Supercell|전략|실시간 카드 배틀|1-1에 있는 분류 그대로|Clash Royale|
+12|Tasty Travels: Merge Game|Century Games Pte. Ltd.|퍼즐|머지|1-1에 있는 분류 그대로|Tasty Travels: Merge Game|
+13|Township|Playrix|시뮬레이션|농장·타운 빌딩|1-1에 있는 분류 그대로|Township|
+14|Match Factory!|Peak Games|퍼즐|타일·마작·트리플 매치|1-1에 있는 분류 그대로|Match Factory!|
+15|Gardenscapes|Playrix|퍼즐|매치3|3-2에 있는 분류 그대로|Gardenscapes|
+16|Free Fire x NARUTO SHIPPUDEN|GARENA INTERNATIONAL I PRIVATE LIMITED|액션·슈팅|배틀로얄|1-2에 있는 분류 그대로|Free Fire x NARUTO SHIPPUDEN|
+17|Coin Master|Moon Active|카드·보드·카지노|보드·주사위 소셜캐주얼|1-1에 있는 분류 그대로|Coin Master|
+18|Pixel Flow!|Loom Games Oyun Yazilim ve Pazarlama Anonim Sirketi|퍼즐|픽셀·컬러 아트|1-1에 있는 분류 그대로|Pixel Flow!|
+19|Colony Flow!|ABI GLOBAL LTD.|퍼즐|픽셀·컬러 아트|1-1에 있는 분류 그대로 (6단계-4에서 확인 후 픽셀·컬러 아트로 맞춤)|Colony Flow!|
+20|Fishdom|Playrix|퍼즐|매치3|3-2에 있는 분류 그대로|Fishdom|
+21|Homescapes: Match 3 Games|Playrix|퍼즐|매치3|3-2에 있는 분류 그대로|Homescapes|
+22|Evony|TOP GAMES INC.|전략|4X·SLG|3-2에 있는 분류 그대로|Evony: The King's Return|
+23|Clash of Clans|Supercell|전략|4X·SLG|3-2에 있는 분류 그대로|Clash of Clans|
+24|Merge Cooking®|Happibits|퍼즐|머지|3-2에 있는 분류 그대로|Merge Cooking|
+25|Screwdom|Zego Global Pte Ltd|퍼즐|정렬·잼|새 게임 — 게임명 기반 분석자 판단 (나사 빼기 정렬 퍼즐로 봄)||Y
+26|Total Battle: War Strategy|Scorewarrior|전략|4X·SLG|3-2에 있는 분류 그대로|Total Battle: War Strategy|
+27|Lightning Link Casino Slots|Product Madness|카드·보드·카지노|소셜 카지노|3-2에 있는 분류 그대로|Lightning Link Casino Slots|
+28|Pokémon TCG Pocket|The Pokemon Company|카드·보드·카지노|트레이딩 카드|1-2에 있는 분류 그대로|Pokémon TCG Pocket|
+29|Jackpot Party - Casino Slots|Phantom EFX, Inc.|카드·보드·카지노|소셜 카지노|3-2에 있는 분류 그대로|Jackpot Party Casino Slots|
+30|EA SPORTS FC Soccer Mobile 27|Electronic Arts|스포츠|축구|1-1에 있는 분류 그대로||
+31|NYT Games: Wordle & Crossword|The New York Times Company|퍼즐|워드|1-1에 있는 분류 그대로||
+32|Bus Traffic Fever!|GOODROID,Inc.|퍼즐|정렬·잼|1-1에 있는 분류 그대로|Bus Traffic Fever!|
+33|Call of Duty®: Mobile|Activision Publishing, Inc.|액션·슈팅|FPS|1-1에 있는 분류 그대로||
+34|Cashman Casino Slots Games|Product Madness|카드·보드·카지노|소셜 카지노|3-2에 있는 분류 그대로|Cashman Casino Slots Games|
+35|Solitaire Associations Journey|Hitapps Games LTD|퍼즐|워드|1-1에 있는 분류 그대로|Solitaire Associations Journey|
+36|DRAGON BALL Z DOKKAN BATTLE|Bandai Namco Entertainment Inc.|RPG|수집형(가챠) RPG|3-2에 있는 분류 그대로|DRAGON BALL Z DOKKAN BATTLE|
+37|Dark War:Survival|Omnilojo Pte Ltd|전략|4X·SLG|3-2에 있는 분류 그대로|Dark War Survival|
+38|Candy Crush Soda Saga|King|퍼즐|매치3|1-1에 있는 분류 그대로|Candy Crush Soda Saga|
+39|Yarn Loop: Knit Puzzle|Combo Games|퍼즐|정렬·잼|1-1에 있는 분류 그대로|Yarn Loop|
+40|All in Hole: Black Hole Games|HOMA GAMES|하이퍼·하이브리드 캐주얼|하이브리드 캐주얼|3-2에 있는 분류 그대로 (6단계-4에서 확인됨)|All in Hole: Black Hole Games|
+41|Color Block Jam|Rollic Games|퍼즐|정렬·잼|1-2에 있는 분류 그대로|Color Block Jam|
+42|Sword x Staff|Boltray Games|RPG|방치형 RPG|3-2에 있는 분류 그대로 (원래 칸이 '확인 필요' — 6단계-4 재검토 후에도 세부는 분석자 판단)|Sword x Staff|Y
+43|Fortnite|Epic Games Inc.|액션·슈팅|배틀로얄|1-1에 있는 분류 그대로||
+44|Travel Town - Merge Adventure|Moon Active|퍼즐|머지|3-2에 있는 분류 그대로|Travel Town - Merge Adventure|
+45|Hay Day|Supercell|시뮬레이션|농장·타운 빌딩|3-2에 있는 분류 그대로|Hay Day|
+46|eFootball™|KONAMI|스포츠|축구|3-2에 있는 분류 그대로|eFootball|
+47|Quick Hit Casino - Vegas Slots|Appchi Media Ltd|카드·보드·카지노|소셜 카지노|3-2에 있는 분류 그대로|Quick Hit Casino Slots Games|
+48|Magic: The Gathering Arena|Wizards of the Coast|카드·보드·카지노|트레이딩 카드|3-2에 있는 분류 그대로|Magic: The Gathering Arena|
+49|Bingo Voyage: Live Bingo Games|VERTEX GAMES PTE. LTD.|카드·보드·카지노|빙고|3-2에 있는 분류 그대로|Bingo Voyage - Live Bingo Game|
+50|Toy Blast|Peak Games|퍼즐|매치3|3-2에 있는 분류 그대로|Toy Blast|
+51|Last Asylum: Plague|WISENESS GAME ONLINE INTERNATIONAL LTD|전략|4X·SLG|3-2에 있는 분류 그대로 (원래 칸이 '확인 필요' — 6단계-4 재검토 후에도 세부는 분석자 판단)|Last Asylum: Plague|Y
+52|Puzzles & Survival|BUILDING-BLOCKS NETWORK TECHNOLOGY CO.,LIMITED|전략|4X·SLG|3-2에 있는 분류 그대로|Puzzles & Survival|
+53|Bingo Blitz™ - BINGO Games|Playtika Santa Monica, LLC|카드·보드·카지노|빙고|3-2에 있는 분류 그대로|Bingo Blitz - Bingo Games|
+54|Dice Dreams™|SuperPlay|카드·보드·카지노|보드·주사위 소셜캐주얼|1-1에 있는 분류 그대로|Dice Dreams|
+55|Food Hunt: Pixel Puzzle|FUNFINITY PTE. LTD|퍼즐|픽셀·컬러 아트|1-1에 있는 분류 그대로||
+56|Matching Story - Merge & Match|VERTEX GAMES PTE. LTD.|퍼즐|타일·마작·트리플 매치|3-2에 있는 분류 그대로 (원래 칸이 '확인 필요' — 6단계-4 재검토 후에도 세부는 분석자 판단)|Matching Story - Puzzle Games|Y
+57|Lordrush|Century Games Innovation Pte. Ltd.|전략|4X·SLG|1-2에 있는 분류 그대로 (원래 칸이 '확인 필요' — 6단계-4 재검토 후에도 세부는 분석자 판단)|Lordrush|Y
+58|Cube Land Puzzle Game|Rotatelab|퍼즐|블록|1-1에 있는 분류 그대로|Cube Land Puzzle Game|
+59|Minecraft: Play with Friends!|Mojang|시뮬레이션|샌드박스|3-2의 Minecraft와 같은 분류 (스토어별 이름 다름)|Minecraft: Dream it, Build it!|
+60|Chess.com - Play and Learn|Chess.com|카드·보드·카지노|클래식 보드|1-1에 있는 분류 그대로||
+61|Free Fire MAX x NARUTO|GARENA INTERNATIONAL I PRIVATE LIMITED|액션·슈팅|배틀로얄|Free Fire와 같은 분류 (2-7에서 배틀로얄로 적음)||
+62|Merge Mansion: Puzzles & Story|Metacore Games Oy|퍼즐|머지|새 게임 — 게임명 기반 분석자 판단||
+63|Brawl Stars|Supercell|액션·슈팅|팀 대전 슈터|1-1에 있는 분류 그대로|Brawl Stars|
+64|Hotel Legacy: Merge Game|Century Games Innovation Pte. Ltd.|퍼즐|머지|1-1에 있는 분류 그대로||
+65|Big Fish Casino: Slots Games|Product Madness|카드·보드·카지노|소셜 카지노|새 게임 — 게임명 기반 분석자 판단||
+66|Triple Match 3D|Boombox Games LTD|퍼즐|타일·마작·트리플 매치|새 게임 — 게임명 기반 분석자 판단||
+67|Foodstars: Merge & Cook|Happibits|퍼즐|머지|1-1에 있는 분류 그대로||
+68|Seaside Escape®: Merge & Story|Microfun Limited|퍼즐|머지|3-2에 있는 분류 그대로|Seaside Escape: Merge & Story|
+69|Age of Origins:Tower Defense|Hong Kong Ke Mo software Co., Limited|전략|4X·SLG|새 게임 — 분석자 판단 (이름은 타워 디펜스지만 SLG로 봄)||Y
+70|Hunting Sniper|SPARKS INFORMATION (SINGAPORE) PTE. LTD.|액션·슈팅|스나이퍼|3-2에 있는 분류 그대로|Hunting Sniper|
+71|X-Clash: Survival Challenge|9z Games(HK)|전략|4X·SLG|2-2 멕시코 Top20에서 전략으로 분류 · 세부는 분석자 판단||Y
+72|Z Route: Redemption|BUILDING-BLOCKS NETWORK TECHNOLOGY CO.,LIMITED|전략|4X·SLG|1-1에 있는 분류 그대로|Z Route: Redemption|
+73|Sand Blocks: Drop Puzzle|Rollic Games|퍼즐|블록|1-1에 있는 분류 그대로||
+74|Golf Clash - Golfing Simulator|Electronic Arts|스포츠|골프|3-2에 있는 분류 그대로|Golf Clash - Golfing Simulator|
+75|PUBG MOBILE|Tencent Mobile International Limited|액션·슈팅|배틀로얄|3-2에 있는 분류 그대로|PUBG MOBILE|
+76|Heart of Vegas - Casino Slots|Product Madness|카드·보드·카지노|소셜 카지노|3-2의 Slots: Heart of Vegas Casino와 같은 분류|Slots: Heart of Vegas Casino|
+77|Triple Match City|Breeze Games L.L.C-FZ|퍼즐|타일·마작·트리플 매치|새 게임 — 게임명 기반 분석자 판단||
+78|Castle Busters|Voodoo|하이퍼·하이브리드 캐주얼|하이브리드 캐주얼|1-1에 있는 분류 그대로||
+79|Cash Frenzy™ - Slots Casino|SpinX Games Limited|카드·보드·카지노|소셜 카지노|3-2에 있는 분류 그대로|Cash Frenzy - Casino Slots|
+80|Top Lords|GAME SPARK PTE. LTD.|전략|4X·SLG|2-2 일본·한국 Top20에서 전략으로 분류 · 세부는 분석자 판단||Y
+81|Project Makeover|Magic Tavern, Inc.|퍼즐|매치3|새 게임 — 분석자 판단 (꾸미기 + 매치3)||
+82|Top Force: Commander|Century Games Innovation Pte. Ltd.|전략|4X·SLG|새 게임 — 게임명 기반 분석자 판단||Y
+83|Car Sort: Color Puzzle|Rollic Games|퍼즐|정렬·잼|새 게임 — 게임명 기반 분석자 판단||
+84|Lotsa Slots™ Casino Slots Game|SpinX Games Limited|카드·보드·카지노|소셜 카지노|3-2에 있는 분류 그대로|Lotsa Slots - Casino Games|
+85|Smash Fest!|Flow Games Bilisim Yazilim ve Pazarlama Anonim Sirketi|하이퍼·하이브리드 캐주얼|물리 파괴|1-1에 있는 분류 그대로||
+86|Marble Sort!|Voodoo|퍼즐|정렬·잼|새 게임 — 게임명 기반 분석자 판단||
+87|Royal Smash! - Physics Puzzle|Cypher Games|하이퍼·하이브리드 캐주얼|물리 파괴|1-1에 있는 분류 그대로|Royal Smash! - Physics Puzzle|
+88|Words With Friends Word Game|Zynga Inc.|퍼즐|워드|새 게임 — 게임명 기반 분석자 판단||"""
+ws = wb.create_sheet("App Store 매출 Top100")
+head_row(ws, 1, ["순위", "게임명", "퍼블리셔", "대분류", "세부 장르", "분류 근거", "구글 매출 Top100 속 같은 게임 (분석자 대조)",
+                 "구글 플레이 매출 순위 (수식)", "비고"])
+rows_i = [l.split("|") for l in ios_g.split("\n")]
+for i, (rk, n, p, d, e, why, gp, y) in enumerate(rows_i, start=2):
+    put(ws, i, [int(rk), n, p, d, e, why, gp or "-", None, ""])
+    ws.cell(i, 8).value = f"=IF(G{i}=\"-\",\"-\",IFERROR(INDEX('매출 Top100'!$A$2:$A$101,MATCH(G{i},'매출 Top100'!$B$2:$B$101,0)),\"-\"))"
+    for c in (1, 8): ws.cell(i, c).alignment = Alignment(horizontal="center")
+    if y == "Y":
+        ws.cell(i, 9).value = "확인 필요"
+        yel_row(ws, i, 4, 6); ws.cell(i, 9).fill = YEL
+LI = 1 + len(rows_i)
+for k in range(LI + 1, 102):
+    put(ws, k, [k - 1, "확인 불가", "", "", "", "", "-", "-", "AppBrain 페이지에 88위까지만 나옴"])
+    ws.cell(k, 1).alignment = Alignment(horizontal="center"); yel_row(ws, k, 2, 9)
+for col, w in zip("ABCDEFGHI", [6, 34, 30, 20, 20, 36, 30, 12, 30]): ws.column_dimensions[col].width = w
+ws.freeze_panes = "C2"
+ws.auto_filter.ref = "A1:I101"
+# 장르 비교 (수식)
+head_row(ws, 1, ["대분류", "App Store 매출 수", "App Store 비율", "구글 매출 Top100 수 (3-2)", "구글 비율", "차이 (App Store-구글)"], c0=11)
+for i, cat in enumerate(CATS, start=2):
+    put(ws, i, [cat, f"=COUNTIF($D$2:$D$101,K{i})", f"=IF($L$13=0,\"\",L{i}/$L$13)",
+                f"=COUNTIF('매출 Top100'!$D$2:$D$101,K{i})", f"=IF($N$13=0,\"\",N{i}/$N$13)", f"=IF(M{i}=\"\",\"\",M{i}-O{i})"], c0=11)
+    for c in (13, 15, 16): ws.cell(i, c).number_format = "0.0%"
+put(ws, 13, ["합계", "=SUM(L2:L12)", "", "=SUM(N2:N12)", "", ""], c0=11)
+for c in range(11, 17): ws.cell(13, c).font = BB
+put(ws, 15, ["두 스토어 매출 순위에 모두 있는 게임 수", "=COUNT(H2:H101)"], c0=11)
+put(ws, 16, ["App Store 매출에만 있는 게임 수 (구글 Top100 밖)", "=COUNTIF(G2:G101,\"-\")-COUNTIF(B2:B101,\"확인 불가\")"], c0=11)
+for col, w in zip("KLMNOP", [36, 12, 12, 14, 10, 14]): ws.column_dimensions[col].width = w
+notes_i = [
+ "출처: " + SRC_AB_IOS_GROSS + " (페이지 'Last updated: October 6, 2026', 2026-10-07 조회). 구글 매출 Top100(3-2)은 2026-10-04 기준이라 날짜가 2일 다름.",
+ "AppBrain 페이지에는 88위까지만 나옴 → 89~100위는 '확인 불가'(노란 줄). 그래서 비율(M열)은 88개 기준, 구글은 100개 기준.",
+ "장르 분류: 1-1·1-2·3-2에 이미 있는 게임은 같은 분류를 그대로 씀(F열에 어느 시트인지 적음). 새 게임 16개는 게임명·공개 정보 기반 분석자 판단 — 확신이 낮으면 노란 칸 + '확인 필요'.",
+ "G열 '같은 게임' 대조는 스토어마다 이름이 조금 달라 분석자가 맞춘 것(예: 'Homescapes: Match 3 Games' = 'Homescapes'). H열은 그 이름으로 3-2에서 순위를 찾는 수식.",
+ "실제 매출액은 비공개 — 순위만 비교함. 매출 순위가 높다 = 그날 그 스토어에서 결제 금액이 많았다는 뜻(정확한 금액은 모름).",
+ "쉬운 요약: 아이폰(App Store)과 안드로이드(구글) 매출 순위에 같은 게임이 많이 겹침(L15). 나머지 비교는 K~P열 표를 보면 됨.",
+]
+for k, t in enumerate(notes_i):
+    c = ws.cell(18 + k, 11, t); c.font = NOTE; c.alignment = Alignment(wrap_text=True, vertical="top")
+ws.cell(18 + 1, 11).fill = YEL
+
+# ---------- (3) 확인 필요 재검토 (새 시트) ----------
+ws = wb.create_sheet("확인 필요 재검토")
+ws["A1"] = "'확인 필요' 노란 칸 재검토 — 확인한 사실·고칠 제안과, 같은 부류끼리 원래 칸에 반영한 결과 (2026-10-07)"; ws["A1"].font = TITLE
+ws["A2"] = ("C열 '지금 값'은 원래 칸을 수식으로 보여 줌(원래 칸을 고치면 여기도 바뀜). G열 '고칠 제안'은 분석자 제안이며, 사용자 승인으로 I열에 적은 대로 원래 칸에 반영함(묶음 A~F). "
+            "출처가 공식 스토어가 아닌 2차 사이트면 결과를 '부분 확인'으로 낮춰 적음.")
+ws["A2"].font = NOTE
+head_row(ws, 4, ["번호", "시트 · 칸", "지금 값 (수식)", "게임 / 항목", "확인한 사실 (쉬운 말)", "확인 결과", "고칠 제안 (분석자 제안)", "출처 (조회일 2026-10-07)", "원래 칸 반영 결과 (6단계-4)"])
+AS, GP, CT, SEA2, GR, BM = "App Store Top100", "Google Play Top100", "국가별 Top20", "동남아 분석", "매출 Top100", "벤치마크 근거"
+def cur(sn, cells):
+    return "=" + "&\" / \"&".join(f"'{sn}'!{a}" for a in cells)
+AB = "https://www.appbrain.com/app/"
+rv = [
+ ("1-1 App Store Top100 · 6행", cur(AS, ["D6", "E6", "F6"]), "Colony Flow!",
+  "상자를 5칸 자리에 놓으면 같은 색 개미가 나와 픽셀 그림의 같은 색 블록을 나름(스토어 태그: Puzzle·Logic).", "부분 확인",
+  "'정렬·잼' 유지 가능. 같은 방식인 Pixel Flow!는 '픽셀·컬러 아트'로 분류돼 있어 둘을 한 세부 장르로 맞출지 결정 필요.",
+  "Google Play https://play.google.com/store/apps/details?id=com.abi.colony.flow"),
+ ("1-1 App Store Top100 · 28행", cur(AS, ["D28", "E28", "F28"]), "CrownCards - Trading Cards",
+  "돈을 넣고 디지털 카드 팩을 열면 진짜 트레이딩 카드가 나오고, 실물 배송이나 출금도 가능하다고 설명됨. 개발사 Crown Cards LLC.", "부분 확인",
+  "대분류 그대로. 세부 장르는 '트레이딩 카드'보다 실물 경품·현금이 걸린 '리얼머니' 성격 — 비고에 적을지 검토.",
+  "game-solver.com 정리 페이지 https://game-solver.com/crowncards-trading-cards/ (2차 출처)"),
+ ("1-1 App Store Top100 · 40행", cur(AS, ["C40", "F40"]), "PlayCash Rewards (퍼블리셔)",
+  "'PlayCash'라는 리워드 앱 기사(2022-06-21, Good Gamer Entertainment)는 있으나 차트 속 앱과 같은 앱인지 확인 안 됨.", "확인 불가",
+  "그대로 둠.", "mugglehead.com 기사 https://mugglehead.com/1365226-2-playcash/"),
+ ("1-1 App Store Top100 · 47행", cur(AS, ["D47", "E47", "F47"]), "NoomiClone",
+  "공개 검색으로 앱 정보를 찾지 못함.", "확인 불가", "그대로 둠.", "웹 검색 (결과 없음)"),
+ ("1-1 App Store Top100 · 69행", cur(AS, ["D69", "E69", "F69"]), "82-0.com",
+  "스토어 분류 '게임: 스포츠'. 무작위 팀·시대에서 농구 선수를 뽑아 5명 라인업으로 82전 전승에 도전하는 게임.", "확인됨",
+  "'스포츠 / 기타' 유지, 비고에 '농구 라인업 짜기' 추가 제안.", "AppGoblin https://appgoblin.info/apps/6780195090 (App Store 정보 정리)"),
+ ("1-1 App Store Top100 · 72행", cur(AS, ["D72", "E72", "F72"]), "Bloons Blitz",
+  "사방에서 몰려오는 풍선(적)을 영웅 하나로 버티는 '탄막 생존(bullet heaven)' 게임. 2026-05-19 필리핀 선출시.", "부분 확인",
+  "'아케이드' 유지 가능. 탄막 생존 장르를 액션·슈팅으로 볼지 기준을 정하면 1-2 101행과 함께 맞춤.",
+  "Bloons Wiki https://www.bloonswiki.com/Bloons_Blitz (팬 위키, 2차 출처)"),
+ ("1-1 App Store Top100 · 100행", cur(AS, ["C100", "F100"]), "Imposter Game - Party Edition (퍼블리셔)",
+  "App Store 판매자 'Sven Vucak', 카테고리 '단어'. 3명 이상이 한 기기로 하는 오프라인 '거짓말쟁이 찾기' 파티 게임.", "확인됨",
+  "C100 퍼블리셔 '확인 불가' → 'Sven Vucak'. 세부 장르 '소셜 디덕션' 유지.", "App Store https://apps.apple.com/us/app/-/id6745120053"),
+ ("1-2 Google Play Top100 · 11행", cur(GP, ["D11", "E11", "F11"]), "MemeMix Challenge: Funny Party",
+  "마이크를 켜고 하는 'AI 음성 파티 게임'. 개발사 Amobear VN Game Global.", "확인됨",
+  "'파티·음악 / 밈 챌린지' 유지 — 노란색 해제 가능.", AB + "mememix-challenge-funny-party/com.mimik.challenge.fun"),
+ ("1-2 Google Play Top100 · 22행", cur(GP, ["D22", "E22", "F22"]), "Colony Flow!",
+  "1번과 같은 게임.", "부분 확인", "1번과 함께 결정.", "1번과 같음"),
+ ("1-2 Google Play Top100 · 46행", cur(GP, ["D46", "E46", "F46"]), "CarLoop",
+  "색 블록을 트랙에 올리면 자동으로 차에 나뉘어 담기는 '정렬 퍼즐'(스토어 분류 Puzzle). 개발사 UUTEAM Technology.", "확인됨",
+  "'퍼즐 / 정렬·잼' 유지 — 노란색 해제 가능.", AB + "carloop/com.blast.puzzlegame.bear"),
+ ("1-2 Google Play Top100 · 88행", cur(GP, ["D88", "E88", "F88"]), "Lordrush",
+  "스토어 분류 Strategy. '중세 타워 디펜스 전략 게임' — 요새 재건·자원·영웅·라이벌 영주.", "부분 확인",
+  "'4X·SLG' 유지 가능(같은 회사 Kingshot도 4X·SLG로 분류). 다만 설명에 연맹·영토 전쟁 문구는 없음.",
+  "game-solver.com https://game-solver.com/lordrush/ (2차 출처)"),
+ ("1-2 Google Play Top100 · 101행", cur(GP, ["D101", "E101", "F101"]), "Bloons Blitz",
+  "6번과 같은 게임.", "부분 확인", "6번과 함께 결정.", "6번과 같음"),
+ ("2-2 국가별 Top20 · 26행", cur(CT, ["G26"]), "Kumquat Hollow Fable (브라질)",
+  "지금 브라질 무료 Top100에 없고, 공개 검색으로 정보를 찾지 못함.", "확인 불가", "그대로 둠.",
+  "AppBrain 브라질 무료 순위 https://www.appbrain.com/stats/google-play-rankings/top_free/game/br"),
+ ("2-2 국가별 Top20 · 82행", cur(CT, ["G82"]), "FORTBLOX: Mobile Fortress GO! (한국 1위)",
+  "'모바일 오토배틀러'(HYPERRISE). 2026-09-22 글로벌 출시.", "확인됨",
+  "대분류 '전략' 제안(자동 전투 + 배치 전략). 기존 분류표에 오토배틀러 칸이 없어 '전략'에 넣는 것이 가장 가까움.",
+  "Inven Global 2026-09-21 https://www.invenglobal.com/articles/26352/hyperrise-launches-fortblox-mobile-fortress-go-globally"),
+ ("2-2 국가별 Top20 · 94행", cur(CT, ["G94"]), "Wild Water World (한국)",
+  "SLG(전략) 방식을 섞은 '뗏목 생존·건설 게임'. 개발 EWORLD(광저우).", "확인됨",
+  "대분류 '전략' 제안.", "FoxData 블로그 2026-10-01 https://foxdata.com/cn/blogs/wild-water-world-how-eworld-hit-1-in-japan-korea-taiwan/"),
+ ("2-7 동남아 분석 · 7행", cur(SEA2, ["G7", "I7"]), "Easy Drum - Real Music Drum",
+  "스토어 분류 '음악(게임)'. 색에 맞춰 가상 드럼을 치는 리듬 게임.", "확인됨",
+  "'파티·음악' 유지, 비고 '확인 필요 — 악기 연주 앱' → '리듬 게임(스토어 분류 음악)'.", AB + "easy-drum-real-music-drum/easy.drum.real.music.drum.set"),
+ ("2-7 동남아 분석 · 10행", cur(SEA2, ["G10", "I10"]), "Fruit Wins",
+  "스토어 분류 Casual, 설명은 'Blast-and-Win' 한 줄뿐. 이용자 리뷰에 '돈을 번다/출금이 안 된다'는 주장이 있음(리뷰는 검증 불가).", "부분 확인",
+  "게임 방식은 여전히 확인 불가 → 그대로. 비고에 '현금 보상 주장이 있는 앱(리뷰 기준)' 메모 추가 검토.", AB + "fruit-wins/com.fruitwins"),
+ ("2-7 동남아 분석 · 13행", cur(SEA2, ["G13", "I13"]), "Water Go",
+  "색깔 물을 관에 옮겨 한 관에 한 색만 남기는 '물 정렬' 퍼즐.", "확인됨",
+  "대분류 '퍼즐' 제안(세부: 정렬·잼).", "Industry.co.id 2026-09-04 https://www.industry.co.id/read/155381/cara-menyelesaikan-level-susah-di-water-go-tanpa-hint"),
+ ("2-7 동남아 분석 · 62행", cur(SEA2, ["C62"]), "888XH… / 77RT… 이름의 앱들",
+  "888XHSukari = 4x4 스도쿠(개발 KESAR SINGH), 888XHPearl = 타이밍 맞춰 누르기(개발 PRIME CONSUMER CORPORATION), 77RTPabu 개발 KK INNOVATION SOLUTION SDN. BHD. 스토어 설명상 단순 캐주얼 게임.",
+  "부분 확인", "설명상 하는 일은 확인됨. 개발사가 서로 다른데 이름 규칙이 같은 이유는 확인 불가 → 그대로.",
+  AB + "888xhsukari/com.qhezf.sukari · " + AB + "888xhpearl/com.northel.orbit"),
+ ("3-2 매출 Top100 · 24행", cur(GR, ["D24", "E24", "F24"]), "Last Asylum: Plague",
+  "스토어 분류 Strategy. 역병이 퍼진 세상에서 마을을 지키는 생존 게임(37GAMES).", "부분 확인",
+  "'4X·SLG' 유지 가능. 같은 회사 Z Route도 같은 분류.", AB + "last-asylum-plague/com.phs.global"),
+ ("3-2 매출 Top100 · 35행", cur(GR, ["D35", "E35", "F35"]), "Sword x Staff",
+  "스토어 분류 Role Playing. 'Third Way RPG'라고 소개.", "부분 확인",
+  "대분류 RPG는 맞음. '방치형'인지는 설명에서 확인 안 됨 → 그대로.", AB + "sword-x-staff/com.zjcs.android.us"),
+ ("3-2 매출 Top100 · 40행", cur(GR, ["D40", "E40", "F40"]), "Yarn Loop",
+  "실패(보빈)를 컨베이어에 올려 같은 색 뜨개 칸을 모으고, 남으면 선반에 보관 — 색 정렬 퍼즐.", "확인됨",
+  "'정렬·잼' 유지 — 노란색 해제 가능.", AB + "yarn-loop/com.combo.yarnflow"),
+ ("3-2 매출 Top100 · 45행", cur(GR, ["D45", "E45", "F45"]), "Coin Master - Board Adventure",
+  "주사위를 굴려 보드를 돌며 코인·습격·방어 칸을 밟는 게임.", "확인됨",
+  "'보드·주사위 소셜캐주얼' 유지 — 노란색 해제 가능.", AB + "coin-master-board-adventure/com.moonactive.cmboard"),
+ ("3-2 매출 Top100 · 49행", cur(GR, ["D49", "E49", "F49"]), "All in Hole: Black Hole Games",
+  "블랙홀을 움직여 물건을 삼키는 io 스타일 게임. 스토어 분류는 Puzzle.", "확인됨",
+  "'하이브리드 캐주얼' 유지 가능(스토어 분류 Puzzle이라는 점만 비고에).", AB + "all-in-hole-black-hole-games/com.homagames.studio.allinhole"),
+ ("3-2 매출 Top100 · 50행", cur(GR, ["D50", "E50", "F50"]), "Z Route: Redemption",
+  "스토어 분류 Strategy. 좀비 종말 세계의 생존 전략(37GAMES).", "부분 확인", "'4X·SLG' 유지 가능.", AB + "com.zroute.global"),
+ ("3-2 매출 Top100 · 54행", cur(GR, ["D54", "E54", "F54"]), "Matching Story - Puzzle Games",
+  "스토어 분류 Casual. 매치3·타일 매치·머지·스토리를 한 게임에 섞었다고 소개.", "부분 확인",
+  "지금 분류 유지 가능, 비고에 '혼합형(매치3·타일·머지)' 추가 제안.", AB + "com.joycastle.mergematch"),
+ ("3-2 매출 Top100 · 67행", cur(GR, ["D67", "E67", "F67"]), "Colony Flow!", "1번과 같은 게임.", "부분 확인", "1번과 함께 결정.", "1번과 같음"),
+ ("3-2 매출 Top100 · 69행", cur(GR, ["D69", "E69", "F69"]), "Lordrush", "11번과 같은 게임.", "부분 확인", "11번과 함께 결정.", "11번과 같음"),
+ ("3-2 매출 Top100 · 73행", cur(GR, ["D73", "E73", "F73"]), "Hollywood Merge",
+  "스토어 분류 Casual. 'Merge! Fashion! Drama!' — 머지 + 스토리.", "확인됨", "'머지' 유지 — 노란색 해제 가능.", AB + "com.hollywood.merge"),
+ ("3-2 매출 Top100 · 91행", cur(GR, ["D91", "E91", "F91"]), "Police Chief",
+  "스토어 분류 Strategy. 작은 경찰서를 넓히고 부서·경찰을 키우는 게임(패키지 이름 com.slg.policewar).", "부분 확인",
+  "'4X·SLG' 유지 가능. 경영(타이쿤) 성격도 있음.", AB + "com.slg.policewar"),
+ ("3-2 매출 Top100 · H20 메모", cur(GR, ["H20"]), "App Store 매출 순위 (다음 단계 확인 필요)",
+  "AppBrain App Store 미국 매출 게임 순위로 새 시트를 만듦.", "해결됨",
+  "'3-4 App Store 매출 Top100' 시트 참고. 원래 메모 칸은 그대로 둠.", SRC_AB_IOS_GROSS),
+ ("4-1 벤치마크 근거 · E27", cur(BM, ["E27"]), "카지노 결제 전환율의 기간 (AppsFlyer)",
+  "원문·요약 페이지를 다시 열려 했으나 이번에는 열리지 않음.", "확인 불가", "그대로 둠.", "https://www.appsflyer.com/resources/reports/app-marketing-monetization-report/"),
+]
+A_ = "반영: 비고를 확인 내용으로 바꾸고 노란색 해제 (묶음 A)"
+E_ = "반영: 비고만 확인 내용으로 바꿈, 세부 장르는 분석자 판단이라 노란색 유지 (묶음 E)"
+F_ = "그대로 둠 — 확인 못 함 (묶음 F)"
+FA = "반영: 확인한 사실만 비고에 덧붙임, 노란색 유지 (묶음 F)"
+CF = "반영: 세부 장르 정렬·잼 → 픽셀·컬러 아트, 노란색 해제 (묶음 D — Pixel Flow!와 같은 부류)"
+LR_ = "반영: 비고에 'Kingshot과 같은 기준' 적음, 노란색 유지 (묶음 D)"
+BL = "반영: 비고에 '탄막 생존, 아케이드 유지' 적음, 노란색 유지 (묶음 D)"
+applied = [CF, E_, F_, F_, A_, BL, "반영: 퍼블리셔 '확인 불가' → 'Sven Vucak', 노란색 해제 (묶음 C)", A_, CF, A_, LR_, BL, F_,
+           "반영: 대분류 '확인 필요' → '전략', 노란색 해제 (묶음 B)", "반영: 대분류 '확인 필요' → '전략', 노란색 해제 (묶음 B)", A_, FA,
+           "반영: 대분류 '확인 필요' → '퍼즐', 노란색 해제 (묶음 B)", FA, E_, E_, A_, A_, A_, E_, E_, CF, LR_, A_, E_,
+           "그대로 둠 — 새 시트 3-4로 해결, 원래 메모 칸은 유지", F_]
+assert len(applied) == len(rv), (len(applied), len(rv))
+for k, row in enumerate(rv, start=1):
+    r = 4 + k
+    put(ws, r, [k] + list(row) + [applied[k - 1]], wrap=True)
+    res = row[4]
+    ws.cell(r, 6).fill = GREEN if res in ("확인됨", "해결됨") else YEL
+    ws.cell(r, 7).fill = YEL
+    ws.cell(r, 9).fill = GREEN if applied[k - 1].startswith("반영") else YEL
+LR = 4 + len(rv)
+head_row(ws, 4, ["확인 결과", "개수 (수식)"], c0=11)
+for i, k in enumerate(["확인됨", "부분 확인", "확인 불가", "해결됨"], start=5):
+    put(ws, i, [k, f"=COUNTIF($F$5:$F${LR},K{i})"], c0=11)
+put(ws, 9, ["합계", "=SUM(L5:L8)"], c0=11)
+put(ws, 11, ["원래 칸에 반영한 곳", f"=COUNTIF($I$5:$I${LR},\"반영*\")"], c0=11)
+put(ws, 12, ["그대로 둔 곳", f"=COUNTIF($I$5:$I${LR},\"그대로*\")"], c0=11)
+put(ws, 13, ["노란색을 해제한 곳", f"=COUNTIF($I$5:$I${LR},\"*노란색 해제*\")"], c0=11)
+ws.cell(15, 11, "초록 = 확인됨/해결됨 또는 반영함, 노란 = 부분 확인/확인 불가, 분석자 제안 또는 그대로 둠").font = NOTE
+for col, w in zip("ABCDEFGHIJKL", [6, 24, 30, 26, 52, 11, 48, 46, 40, 2, 20, 10]): ws.column_dimensions[col].width = w
+ws.freeze_panes = "A5"
+
+# ---------- (4) 개요 맨 아래 2줄 추가 ----------
+g = wb["개요"]
+nr = g.max_row + 1
+for k, (a, b_) in enumerate([
+    ("6단계-4 출처 (2026-10-07 조회)", "App Store 매출 순위: AppBrain App Store Top Grossing Games 미국 (페이지 갱신 2026-10-06, 88위까지 표시). 매출-다운로드 비교 F·G열: AppBrain 앱 상세 페이지(Google Play 다운로드 표시·등록 월) 172개 전부, 그중 3개는 Google Play 상세 페이지 직접 확인. 확인 필요 재검토: Google Play·App Store·AppBrain 앱 상세 + 2차 출처(게임 위키·정리 사이트·기사, 시트에 표시)."),
+    ("6단계-4 한계", "App Store 매출 89~100위는 확인 불가(페이지에 없음). App Store 매출(10-06)과 구글 매출(10-04)은 날짜가 2일 다름. AppBrain이 옮겨 적은 설치 구간은 Google Play보다 늦을 수 있음(2026년 출시 10개 대조 중 3개 다름, 노란 칸). Tiki Smash!의 등록 월은 확인 불가. 2-6 표 B·C(대륙별 게이머 OS 비율·스토어별 매출)와 동남아 4개국 Top20은 다시 찾아봤지만 공개 자료가 없어 그대로 '확인 불가'. '확인 필요' 칸은 같은 부류끼리 묶어 원래 칸에 반영(0-2 I열) — 세부 장르가 분석자 판단인 칸은 노란색 유지.")]):
     g.cell(nr + k, 1, a).font = BB; g.cell(nr + k, 1).border = BD
     c = g.cell(nr + k, 2, b_); c.font = B; c.border = BD; c.alignment = Alignment(wrap_text=True, vertical="top")
 
@@ -2645,6 +3331,7 @@ GROUPS_B = {0: ("안내", "404040"), 1: ("성공 비결", "C00000"), 2: ("MVP", 
 # (그룹, 기존 시트 이름 또는 None=예정, 새 시트 이름, 한 줄 설명, 비고)
 FILE_A = [
     (0, "개요", "0-1 개요", "분석 범위·기준일·출처 모음", ""),
+    (0, "확인 필요 재검토", "0-2 확인 필요 재검토", "노란 '확인 필요' 칸 32곳을 다시 확인한 결과·고칠 제안과, 같은 부류끼리 원래 칸에 반영한 결과", "6단계-4에서 만듦"),
     (1, "App Store Top100", "1-1 App Store Top100", "미국 App Store 무료 게임 1~100위와 장르 분류 (기준일 2026-10-03)", ""),
     (1, "Google Play Top100", "1-2 Google Play Top100", "미국 구글 플레이 무료 게임 1~100위와 장르 분류 (기준일 2026-10-04)", "게임전략 파일 4-4에 참조용 복사본 있음"),
     (1, "장르 분포", "1-3 장르 분포", "두 스토어 Top100의 대분류별 게임 수·비율 (수식 자동 집계)", ""),
@@ -2661,6 +3348,7 @@ FILE_A = [
     (3, "매출 순위 원자료", "3-1 매출 순위 원자료", "미국·브라질·일본·한국 구글 플레이 매출 Top10 원자료", ""),
     (3, "매출 Top100", "3-2 매출 Top100", "미국 구글 플레이 매출 Top100 장르 분류 (기준일 2026-10-04) + 무료 Top100과 장르 비교", "게임전략 파일 4-5에 참조용 복사본 있음"),
     (3, "매출-다운로드 비교", "3-3 매출-다운로드 비교", "매출 순위 vs 무료 순위·추정 설치 수 구간, 4가지 유형 자동 분류", "게임전략 파일 4-6에 참조용 복사본 있음"),
+    (3, "App Store 매출 Top100", "3-4 App Store 매출 Top100", "미국 App Store 매출 게임 순위(88위까지)·장르 분류 + 구글 매출 Top100과 장르·순위 비교 (수식)", "6단계-4에서 만듦 · 89~100위 확인 불가"),
     (4, "벤치마크 근거", "4-1 벤치마크 근거", "리텐션·수익 등 공개 벤치마크 수치와 출처", ""),
     (4, "지역 벤치마크", "4-2 지역 벤치마크", "지역별 지표 중앙값·상위 구간 표", "게임전략 파일 4-1에 참조용 복사본 있음"),
     (4, "장르 차트 판독값", "4-3 장르 차트 판독값", "GameAnalytics 2025 장르별 차트를 눈으로 읽은 값 (판독값)", "게임전략 파일 4-2에 참조용 복사본 있음"),
@@ -2684,6 +3372,8 @@ FILE_B = [
     (3, "광고 채널 분석", "3-2 광고 채널 분석", "유튜브·인스타·페이스북·틱톡·인플루언서 비교 (공개 자료 + 2인 팀 점수표)", "6단계-3에서 만듦"),
     (3, "후킹 영상 분석", "3-3 후킹 영상 분석", "Royal Match·MONOPOLY GO!·Magic Sort! 메타 광고의 후킹 유형·형식 빈도 (AdWhispr 분류)", "6단계-3에서 만듦 · 처음 3초는 메타 광고 라이브러리 화면 판독(분석자)"),
     (3, "마케팅 실행안", "3-4 마케팅 실행안", "우리 MVP용 단계별 지역·OS·채널·예산·소재·측정 지표 (분석자 제안)", "6단계-3에서 만듦"),
+    (3, "광고 소재 해부", "3-5 광고 소재 해부", "영상 12개의 도파민(보상·긴장) 요소·영상 효과·구성 판독 + 사운드 체크리스트(사용자 기입)", "6단계-3에서 만듦"),
+    (3, "광고 MVP 구성표", "3-6 광고 MVP 구성표", "우리 정렬 퍼즐용 15초·30초 광고 구간별 구성안 (분석자 제안)", "6단계-3에서 만듦"),
     (4, "지역 벤치마크", "4-1 지역 벤치마크(참조)", "2-2 MVP 검증 목표가 쓰는 표의 복사본",
         "원본: 시장조사.xlsx › 4-2 지역 벤치마크"),
     (4, "장르 차트 판독값", "4-2 장르 차트 판독값(참조)", "4-3이 계산에 쓰는 판독값의 복사본",

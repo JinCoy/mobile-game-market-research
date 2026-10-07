@@ -1,8 +1,8 @@
 {
-  "sheets": 47,
-  "observations": 420,
-  "knownGames": 243,
-  "missingSlots": 1,
+  "sheets": 51,
+  "observations": 520,
+  "knownGames": 256,
+  "missingSlots": 13,
   "channels": 7,
   "aiSamplesPerTable": 75,
   "creatives": 30,
@@ -14,5 +14,39 @@
     "budget": 10000,
     "installs": 15524.92341966025,
     "d7": 563.9167362851576
-  }
+  },
+  "appStoreGrossingGenres": {
+    "퍼즐": 35,
+    "하이퍼·하이브리드 캐주얼": 4,
+    "카드·보드·카지노": 16,
+    "시뮬레이션": 3,
+    "전략": 16,
+    "액션·슈팅": 7,
+    "스포츠": 3,
+    "RPG": 3,
+    "파티·음악": 0,
+    "기타(UGC·리워드)": 1,
+    "확인 불가": 0
+  },
+  "appStoreGrossingBoth": 63,
+  "appStoreGrossingOnly": 25,
+  "reviewResults": {
+    "확인됨": 12,
+    "부분 확인": 15,
+    "확인 불가": 4,
+    "해결됨": 1
+  },
+  "revenueDownloadTypes": {
+    "① 둘 다 높음": 4,
+    "② 매출만 높음": 25,
+    "③ 다운로드만 높음": 26,
+    "④ 둘 다 기준 밖": 117
+  },
+  "changelogStages": [
+    "6단계-4",
+    "6단계-3",
+    "6단계-2",
+    "3단계",
+    "2단계"
+  ]
 }

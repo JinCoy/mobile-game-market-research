@@ -5,7 +5,8 @@ import {channelScore,planResult,latestRecords} from '../src/lib/analysis';
 import type {Observation,PlanPhase} from '../src/lib/schema';
 
 test('normalized evidence reconciles samples, default calculations and missing formulas',()=>{
-  expect(data.documents).toHaveLength(47);
+  expect(data.documents).toHaveLength(51);
+  expect(data.toc.flatMap(b=>b.items)).toHaveLength(51);
   expect(data.advertisingChannels.map(c=>c.score)).toEqual([94,66,70,59,51,81,72]);
   for(const c of data.advertisingChannels) expect(channelScore(c.scores,data.channelWeights.map(w=>w*100))).toBeCloseTo(c.score,10);
   expect(channelScore([5,5,5,5,5],[20,25,25,20,9])).toBeNull();
