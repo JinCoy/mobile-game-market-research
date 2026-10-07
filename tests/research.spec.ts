@@ -1,7 +1,8 @@
 import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
 import data from '../data/market.json' with {type:'json'};
-import {hashFor,sections} from '../src/lib/routes';
+import {hashFor,sections,parseHash} from '../src/lib/routes';
+import type {Dataset} from '../src/lib/schema';
 /** Navigate inside the open page (keeps local state) via the same hash links the menu uses. */
 const go=(page:import('@playwright/test').Page,target:string)=>page.evaluate(h=>{location.hash=h},target.startsWith('#')?target:hashFor(sections.find(([,label])=>label===target)![0]));
 import {channelScore,planResult,latestRecords} from '../src/lib/analysis';
@@ -229,4 +230,26 @@ test('menu: four top items, every workbook sheet reachable from its 0 목차 sid
   await page.keyboard.press('Tab');await page.keyboard.press('Escape');
   await expect(toggle).toHaveAttribute('aria-expanded','false');await expect(toggle).toBeFocused();
   expect(errors).toEqual([]);
+});
+
+test('workbook cell status stays visible and distinct from the brand yellow; internal links resolve',async({page})=>{
+  await page.goto('./#/market/0-2');
+  await expect(page.locator('.cell-legend')).toContainText('노란 칸 · 추정·판독·확인 필요 56곳');
+  await expect(page.locator('.cell-legend')).toContainText('확인됨 40곳');
+  const flag=page.locator('.cell-legend .status-flagged');
+  expect(await flag.evaluate(el=>[getComputedStyle(el).borderTopStyle,getComputedStyle(el).backgroundColor])).toEqual(['dashed','rgba(0, 0, 0, 0)']);
+  await expect(page.locator('td.cell-verified')).toHaveCount(40);
+  await go(page,'#/market/rankings');
+  await page.getByRole('textbox',{name:'게임 검색'}).fill('NoomiClone');
+  await expect(page.locator('.game-table .status-flagged')).toHaveText('추정·확인 필요');
+  await page.getByRole('textbox',{name:'게임 검색'}).fill('MemeMix');
+  await expect(page.locator('.game-table .status-flagged')).toHaveCount(0);
+  const hrefs=new Set<string>();
+  for(const hash of ['#/','#/updates','#/market','#/strategy','#/market/regions','#/strategy/marketing']) {
+    await go(page,hash);await expect(page.getByRole('heading',{level:1})).toBeVisible();
+    for(const h of await page.locator('a[href^="#"]').evaluateAll(as=>as.map(a=>a.getAttribute('href')!))) hrefs.add(h);
+  }
+  const broken=[...hrefs].filter(h=>h!=='#/'&&parseHash(h,data as unknown as Dataset).section==='overview');
+  expect(broken).toEqual([]);
+  expect(hrefs.size).toBeGreaterThan(51);
 });

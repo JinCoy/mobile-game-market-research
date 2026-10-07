@@ -17,10 +17,12 @@ export type Observation = {
   id: string; gameId: string; name: string; publisher: string; genre: string;
   subgenre: string | null; country: string; store: Store; date: string; year: number;
   rank: number; chart: 'free' | 'grossing'; notes: string | null; source: Source;
+  /** The source row has a yellow cell in the workbook (estimate, reading or needs check). */
+  flagged: boolean;
 };
 export type ResearchDocument = {id: string; file: string; sheet: string; rows: (string | number | boolean | null)[][]; formulas: Record<string,string|undefined>; blankStates: Record<string,string|undefined>;
   /** Workbook cell meaning: yellow fill = estimate/reading/needs check, green fill = verified, blue font = analyst input/assumption. */
-  cellStatus: Record<string, CellStatus | undefined>};
+  cellStatus: Record<string, CellStatus[] | undefined>};
 export type CellStatus = 'flagged' | 'verified' | 'input';
 export type TocItem = {group: string; sheet: string; description: string | null; status: string | null; note: string | null};
 export type ChangelogEntry = {stage: string; date: string | null; sources: string | null; limits: string | null; row: number | null; sheets: {file: string; sheet: string; note: string}[]};

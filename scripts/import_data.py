@@ -24,11 +24,11 @@ def clean(value):
 STATUS_FILLS = {"FFF2CC": "flagged", "E2EFDA": "verified"}
 
 def cell_status(cell):
+    """A cell can carry both marks, e.g. a yellow assumption typed in blue (3-3 B2)."""
     fill = cell.fill.fgColor.rgb if cell.fill and cell.fill.fill_type == "solid" else None
-    if isinstance(fill, str) and fill[-6:].upper() in STATUS_FILLS:
-        return STATUS_FILLS[fill[-6:].upper()]
     color = cell.font.color.rgb if cell.font and cell.font.color is not None else None
-    return "input" if isinstance(color, str) and color[-6:].upper() == "0000FF" else None
+    marks = [STATUS_FILLS[fill[-6:].upper()]] if isinstance(fill, str) and fill[-6:].upper() in STATUS_FILLS else []
+    return marks + (["input"] if isinstance(color, str) and color[-6:].upper() == "0000FF" else [])
 
 def key(name):
     name = unicodedata.normalize("NFKD", name).casefold()
@@ -78,6 +78,9 @@ def main():
             alias_lookup[key(values[1])] = alias_lookup.get(key(values[6]), key(values[6]))
     observations = []
     games = {}
+    # Rows whose workbook cells are yellow (estimate / reading / needs check), per market sheet.
+    flagged_rows = {d["sheet"]: {int(re.sub(r"[A-Z]+", "", c)) for c, v in d["cellStatus"].items() if "flagged" in v}
+                    for d in documents if d["file"] == "시장조사.xlsx"}
     def add(name, publisher, genre, subgenre, country, store, date, rank, chart, sheet, row, notes=None, url=None):
         if not isinstance(rank, int) or not 1 <= rank <= 100:
             return
@@ -93,7 +96,7 @@ def main():
         observations.append({"id": f"{country}-{store}-{chart}-{date}-{rank}", "gameId": game_id,
                              "name": name, "publisher": publisher, "genre": genre, "subgenre": subgenre,
                              "country": country, "store": store, "date": date, "year": int(date[:4]),
-                             "rank": rank, "chart": chart, "notes": notes,
+                             "rank": rank, "chart": chart, "notes": notes, "flagged": row in flagged_rows.get(sheet, set()),
                              "source": {"file": "시장조사.xlsx", "sheet": sheet, "row": row, "url": url}})
     for store, sheet, url in [("ios", "1-1 App Store Top100", "https://gamedropdaily.com/mobile/"),
                                ("android", "1-2 Google Play Top100", "https://www.appbrain.com/stats/google-play-rankings/top_free/game/us")]:
@@ -138,7 +141,7 @@ def main():
         if game and values[5]:
             urls = re.findall(r"https?://\S+", str(values[8] or ""))
             game["installRange"] = {"range": values[5], "released": values[6],
-                                    "flagged": [c for c in "FG" if install_status.get(f"{c}{row}") == "flagged"],
+                                    "flagged": [c for c in "FG" if "flagged" in install_status.get(f"{c}{row}", [])],
                                     "source": {"file": "시장조사.xlsx", "sheet": "3-3 매출-다운로드 비교", "row": row, "url": urls[0] if urls else None}}
     for name, hook in hooks.items():
         game = games.get(identity(name))
